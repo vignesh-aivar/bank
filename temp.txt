@@ -1,0 +1,16 @@
+for svc in backend eval pca voice-service; do
+  K8S_NAME="convogent-${svc%-service}-secrets"
+
+  SECRET_JSON=$(aws secretsmanager get-secret-value \
+    --secret-id "convogent/dev/$svc" \
+    --region ap-south-1 \
+    --query SecretString --output text)
+
+  kubectl delete secret "$K8S_NAME" -n convogent --ignore-not-found
+  kubectl create secret generic "$K8S_NAME" \
+    -n convogent \
+    --from-env-file=<(echo "$SECRET_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+done
+
+kubectl rollout restart deployment -n convogent
+
