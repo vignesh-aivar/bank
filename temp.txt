@@ -1,3 +1,31 @@
+# Backend
+aws secretsmanager get-secret-value --secret-id convogent/dev/backend --region ap-south-1 \
+  --query SecretString --output text | \
+  jq '.KAFKA_ENABLED = "false"' | \
+  xargs -0 aws secretsmanager put-secret-value --secret-id convogent/dev/backend --region ap-south-1 --secret-string
+
+# Eval
+aws secretsmanager get-secret-value --secret-id convogent/dev/eval --region ap-south-1 \
+  --query SecretString --output text | \
+  jq '.KAFKA_ENABLED = "false"' | \
+  xargs -0 aws secretsmanager put-secret-value --secret-id convogent/dev/eval --region ap-south-1 --secret-string
+
+# PCA
+aws secretsmanager get-secret-value --secret-id convogent/dev/pca --region ap-south-1 \
+  --query SecretString --output text | \
+  jq '.KAFKA_ENABLED = "false"' | \
+  xargs -0 aws secretsmanager put-secret-value --secret-id convogent/dev/pca --region ap-south-1 --secret-string
+
+# Voice
+aws secretsmanager get-secret-value --secret-id convogent/dev/voice-service --region ap-south-1 \
+  --query SecretString --output text | \
+  jq '.KAFKA_ENABLED = "false"' | \
+  xargs -0 aws secretsmanager put-secret-value --secret-id convogent/dev/voice-service --region ap-south-1 --secret-string
+
+
+
+
+
 for svc in backend eval pca voice-service; do
   K8S_NAME="convogent-${svc%-service}-secrets"
 
