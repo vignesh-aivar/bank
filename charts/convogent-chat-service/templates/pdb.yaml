@@ -1,0 +1,18 @@
+{{- if and .Values.chatService.enabled ((.Values.chatService.pdb).enabled) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "convogent-chat.name" . }}
+  namespace: {{ include "convogent-chat.namespace" . }}
+  labels:
+    {{- include "convogent-chat.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.chatService.pdb.minAvailable }}
+  minAvailable: {{ .Values.chatService.pdb.minAvailable }}
+  {{- else if .Values.chatService.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.chatService.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "convogent-chat.selectorLabels" . | nindent 6 }}
+{{- end }}

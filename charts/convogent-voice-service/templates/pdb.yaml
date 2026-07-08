@@ -1,0 +1,20 @@
+{{- if and .Values.voiceService.enabled .Values.voiceService.pdb }}
+{{- if eq (.Values.voiceService.pdb.enabled | toString) "true" }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "convogent-voice.name" . }}-pdb
+  namespace: {{ include "convogent-voice.namespace" . }}
+  labels:
+    {{- include "convogent-voice.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.voiceService.pdb.minAvailable }}
+  minAvailable: {{ .Values.voiceService.pdb.minAvailable }}
+  {{- else if .Values.voiceService.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.voiceService.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "convogent-voice.selectorLabels" . | nindent 6 }}
+{{- end }}
+{{- end }}

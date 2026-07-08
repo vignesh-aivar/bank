@@ -1,0 +1,5 @@
+Chat Service deployed successfully!
+
+Service: {{ include "convogent-chat.name" . }}
+Namespace: {{ include "convogent-chat.namespace" . }}
+URL: https://{{ .Values.global.host }}

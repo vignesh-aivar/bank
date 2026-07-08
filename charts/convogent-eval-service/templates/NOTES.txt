@@ -1,0 +1,5 @@
+Eval Service deployed successfully!
+
+Service: {{ include "convogent-eval.name" . }}
+Namespace: {{ include "convogent-eval.namespace" . }}
+URL: https://{{ .Values.global.host }}

@@ -1,0 +1,9 @@
+Convogent Frontend has been installed.
+
+  Name:      {{ include "convogent-frontend.name" . }}
+  Namespace: {{ include "convogent-frontend.namespace" . }}
+
+To get the application URL (after ALB is provisioned):
+  https://{{ .Values.global.host }}
+
+Ensure the namespace and service account exist, and that AWS Load Balancer Controller is installed.

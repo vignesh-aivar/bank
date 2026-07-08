@@ -1,0 +1,20 @@
+{{- if and .Values.pcaService.enabled ((.Values.pcaService.keda).enabled) }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "convogent-pca.name" . }}
+  namespace: {{ include "convogent-pca.namespace" . }}
+  labels:
+    {{- include "convogent-pca.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "convogent-pca.name" . }}
+  pollingInterval: {{ .Values.pcaService.keda.pollingInterval | default 15 }}
+  cooldownPeriod: {{ .Values.pcaService.keda.cooldownPeriod | default 300 }}
+  minReplicaCount: {{ .Values.pcaService.keda.minReplicas | default 1 }}
+  maxReplicaCount: {{ .Values.pcaService.keda.maxReplicas | default 10 }}
+  advanced:
+    restoreToOriginalReplicaCount: false
+  triggers:
+    {{- toYaml .Values.pcaService.keda.triggers | nindent 4 }}
+{{- end }}

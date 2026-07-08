@@ -1,0 +1,18 @@
+{{- if and .Values.backend.enabled ((.Values.backend.pdb).enabled) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "convogent-backend.name" . }}
+  namespace: {{ include "convogent-backend.namespace" . }}
+  labels:
+    {{- include "convogent-backend.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.backend.pdb.minAvailable }}
+  minAvailable: {{ .Values.backend.pdb.minAvailable }}
+  {{- else if .Values.backend.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.backend.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "convogent-backend.selectorLabels" . | nindent 6 }}
+{{- end }}

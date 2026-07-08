@@ -1,0 +1,13 @@
+{{- if .Values.voiceService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "convogent-voice.name" . }}-config
+  namespace: {{ include "convogent-voice.namespace" . }}
+  labels:
+    {{- include "convogent-voice.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.voiceService.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

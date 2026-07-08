@@ -1,0 +1,38 @@
+{{- if and .Values.chatService.enabled ((.Values.chatService.keda).enabled) }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "convogent-chat.name" . }}
+  namespace: {{ include "convogent-chat.namespace" . }}
+  labels:
+    {{- include "convogent-chat.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "convogent-chat.name" . }}
+  pollingInterval: {{ .Values.chatService.keda.pollingInterval | default 15 }}
+  cooldownPeriod: {{ .Values.chatService.keda.cooldownPeriod | default 600 }}
+  minReplicaCount: {{ .Values.chatService.keda.minReplicas | default 1 }}
+  maxReplicaCount: {{ .Values.chatService.keda.maxReplicas | default 5 }}
+  advanced:
+    restoreToOriginalReplicaCount: false
+    horizontalPodAutoscalerConfig:
+      behavior:
+        # Conservative scale-down: websocket sessions are long-lived, so drain
+        # slowly (one pod at a time after a long stabilization window).
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.chatService.keda.scaleDownStabilization | default 1800 }}
+          policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 120
+          selectPolicy: Min
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+          selectPolicy: Max
+  triggers:
+    {{- toYaml .Values.chatService.keda.triggers | nindent 4 }}
+{{- end }}

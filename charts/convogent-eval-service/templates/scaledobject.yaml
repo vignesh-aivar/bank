@@ -1,0 +1,20 @@
+{{- if and .Values.evalService.enabled ((.Values.evalService.keda).enabled) }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "convogent-eval.name" . }}
+  namespace: {{ include "convogent-eval.namespace" . }}
+  labels:
+    {{- include "convogent-eval.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "convogent-eval.name" . }}
+  pollingInterval: {{ .Values.evalService.keda.pollingInterval | default 15 }}
+  cooldownPeriod: {{ .Values.evalService.keda.cooldownPeriod | default 300 }}
+  minReplicaCount: {{ .Values.evalService.keda.minReplicas | default 1 }}
+  maxReplicaCount: {{ .Values.evalService.keda.maxReplicas | default 10 }}
+  advanced:
+    restoreToOriginalReplicaCount: false
+  triggers:
+    {{- toYaml .Values.evalService.keda.triggers | nindent 4 }}
+{{- end }}

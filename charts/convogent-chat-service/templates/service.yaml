@@ -1,0 +1,18 @@
+{{- if .Values.chatService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "convogent-chat.name" . }}
+  namespace: {{ include "convogent-chat.namespace" . }}
+  labels:
+    {{- include "convogent-chat.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.chatService.service.type }}
+  ports:
+    - port: {{ .Values.chatService.service.port }}
+      targetPort: {{ .Values.chatService.service.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "convogent-chat.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: convogent-eval-service
+description: Convogent Eval Service
+type: application
+version: 0.1.0
+appVersion: "1.0"
+keywords:
+  - convogentv2
+  - eval
+maintainers:
+  - name: Convogentv2
+    email: team@convogentv2.com

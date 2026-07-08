@@ -1,0 +1,13 @@
+{{- if .Values.chatService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "convogent-chat.name" . }}-config
+  namespace: {{ include "convogent-chat.namespace" . }}
+  labels:
+    {{- include "convogent-chat.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.chatService.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

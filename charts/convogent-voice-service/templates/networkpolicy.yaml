@@ -1,0 +1,31 @@
+{{- if and .Values.voiceService.enabled ((.Values.voiceService.networkPolicy).enabled) }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "convogent-voice.name" . }}
+  namespace: {{ include "convogent-voice.namespace" . }}
+  labels:
+    {{- include "convogent-voice.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "convogent-voice.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.voiceService.service.port }}
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - {}
+{{- end }}

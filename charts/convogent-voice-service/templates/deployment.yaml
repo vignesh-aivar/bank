@@ -1,0 +1,113 @@
+{{- if .Values.voiceService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "convogent-voice.name" . }}
+  namespace: {{ include "convogent-voice.namespace" . }}
+  labels:
+    {{- include "convogent-voice.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.voiceService.replicaCount }}
+  revisionHistoryLimit: {{ .Values.voiceService.revisionHistoryLimit | default 5 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ ((.Values.voiceService.strategy).maxSurge) | default "25%" }}
+      maxUnavailable: {{ ((.Values.voiceService.strategy).maxUnavailable) | default 0 }}
+  selector:
+    matchLabels:
+      {{- include "convogent-voice.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "convogent-voice.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        karpenter.sh/do-not-disrupt: "true"
+        {{- with .Values.voiceService.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.voiceService.serviceAccountName | default .Values.global.serviceAccountName }}
+      terminationGracePeriodSeconds: {{ .Values.voiceService.terminationGracePeriodSeconds | default 120 }}
+      securityContext:
+        {{- include "convogent-voice.podSecurityContext" . | nindent 8 }}
+      {{- with .Values.voiceService.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.voiceService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.voiceService.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- range .Values.voiceService.topologySpreadConstraints }}
+        - {{ toYaml . | nindent 10 | trim }}
+          labelSelector:
+            matchLabels:
+              {{- include "convogent-voice.selectorLabels" $ | nindent 14 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: voice
+          image: {{ include "convogent-voice.image" . }}
+          imagePullPolicy: {{ .Values.voiceService.image.pullPolicy }}
+          securityContext:
+            {{- include "convogent-voice.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - containerPort: {{ .Values.voiceService.service.port }}
+              name: http
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "convogent-voice.name" . }}-config
+            {{- if .Values.voiceService.envFromSecret }}
+            - secretRef:
+                name: {{ .Values.voiceService.envFromSecret }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.voiceService.resources | nindent 12 }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "{{ .Values.voiceService.preStopSleepSeconds | default 30 }}"]
+          {{- if .Values.voiceService.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.voiceService.livenessProbe.path }}
+              port: {{ .Values.voiceService.livenessProbe.port }}
+            initialDelaySeconds: {{ .Values.voiceService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.voiceService.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.voiceService.livenessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.voiceService.livenessProbe.failureThreshold | default 3 }}
+          {{- end }}
+          {{- if .Values.voiceService.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.voiceService.readinessProbe.path }}
+              port: {{ .Values.voiceService.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.voiceService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.voiceService.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.voiceService.readinessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.voiceService.readinessProbe.failureThreshold | default 3 }}
+          {{- end }}
+          volumeMounts:
+            - name: recordings
+              mountPath: /src/call_recordings
+            - name: transcripts
+              mountPath: /src/call_transcripts
+            - name: logger
+              mountPath: /app/logger
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: recordings
+          emptyDir: {}
+        - name: transcripts
+          emptyDir: {}
+        - name: logger
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+{{- end }}

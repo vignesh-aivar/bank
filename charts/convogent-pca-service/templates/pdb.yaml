@@ -1,0 +1,18 @@
+{{- if and .Values.pcaService.enabled ((.Values.pcaService.pdb).enabled) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "convogent-pca.name" . }}
+  namespace: {{ include "convogent-pca.namespace" . }}
+  labels:
+    {{- include "convogent-pca.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.pcaService.pdb.minAvailable }}
+  minAvailable: {{ .Values.pcaService.pdb.minAvailable }}
+  {{- else if .Values.pcaService.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.pcaService.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "convogent-pca.selectorLabels" . | nindent 6 }}
+{{- end }}

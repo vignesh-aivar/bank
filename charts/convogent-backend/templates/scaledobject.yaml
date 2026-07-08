@@ -1,0 +1,36 @@
+{{- if and .Values.backend.enabled ((.Values.backend.keda).enabled) }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "convogent-backend.name" . }}
+  namespace: {{ include "convogent-backend.namespace" . }}
+  labels:
+    {{- include "convogent-backend.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "convogent-backend.name" . }}
+  pollingInterval: {{ .Values.backend.keda.pollingInterval | default 15 }}
+  cooldownPeriod: {{ .Values.backend.keda.cooldownPeriod | default 300 }}
+  minReplicaCount: {{ .Values.backend.keda.minReplicas | default 1 }}
+  maxReplicaCount: {{ .Values.backend.keda.maxReplicas | default 10 }}
+  advanced:
+    restoreToOriginalReplicaCount: false
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.backend.keda.scaleDownStabilization | default 300 }}
+          policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 60
+          selectPolicy: Min
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+          selectPolicy: Max
+  triggers:
+    {{- toYaml .Values.backend.keda.triggers | nindent 4 }}
+{{- end }}

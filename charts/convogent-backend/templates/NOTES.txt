@@ -1,0 +1,12 @@
+Convogent Backend has been installed.
+
+  Name:      {{ include "convogent-backend.name" . }}
+  Namespace: {{ include "convogent-backend.namespace" . }}
+
+Service account (shared by frontend/backend/agent) is created by this chart when global.serviceAccount.create is true.
+
+To get the application URL (after ALB is provisioned):
+  https://{{ .Values.global.host }}/api
+
+For sensitive env (e.g. MONGO_MASTER_KEY), use backend.envFromSecret or create the Secret manually.
+Ensure AWS Load Balancer Controller is installed.

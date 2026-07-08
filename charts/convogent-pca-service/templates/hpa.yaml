@@ -1,0 +1,50 @@
+{{- $hpa := .Values.pcaService.autoscaling | default dict }}
+{{- if and .Values.pcaService.enabled ($hpa.enabled | default false) }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "convogent-pca.name" . }}
+  namespace: {{ include "convogent-pca.namespace" . }}
+  labels:
+    {{- include "convogent-pca.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "convogent-pca.name" . }}
+  minReplicas: {{ $hpa.minReplicas }}
+  maxReplicas: {{ $hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $hpa.targetCPUUtilizationPercentage }}
+    {{- if $hpa.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $hpa.targetMemoryUtilizationPercentage }}
+    {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: {{ $hpa.scaleDownStabilizationWindowSeconds | default 600 }}
+      policies:
+        - type: Pods
+          value: {{ $hpa.scaleDownPods | default 1 }}
+          periodSeconds: {{ $hpa.scaleDownPeriodSeconds | default 120 }}
+      selectPolicy: {{ $hpa.scaleDownSelectPolicy | default "Min" }}
+    scaleUp:
+      stabilizationWindowSeconds: {{ $hpa.scaleUpStabilizationWindowSeconds | default 0 }}
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: {{ $hpa.scaleUpPeriodSeconds | default 15 }}
+        - type: Pods
+          value: 4
+          periodSeconds: {{ $hpa.scaleUpPeriodSeconds | default 15 }}
+      selectPolicy: Max
+{{- end }}

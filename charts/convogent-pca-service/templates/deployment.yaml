@@ -1,0 +1,110 @@
+{{- if .Values.pcaService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "convogent-pca.name" . }}
+  namespace: {{ include "convogent-pca.namespace" . }}
+  labels:
+    {{- include "convogent-pca.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.pcaService.replicaCount }}
+  revisionHistoryLimit: {{ .Values.pcaService.revisionHistoryLimit | default 5 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ ((.Values.pcaService.strategy).maxSurge) | default "25%" }}
+      maxUnavailable: {{ ((.Values.pcaService.strategy).maxUnavailable) | default 0 }}
+  selector:
+    matchLabels:
+      {{- include "convogent-pca.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "convogent-pca.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.pcaService.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.pcaService.serviceAccountName | default .Values.global.serviceAccountName }}
+      terminationGracePeriodSeconds: {{ .Values.pcaService.terminationGracePeriodSeconds | default 30 }}
+      securityContext:
+        {{- include "convogent-pca.podSecurityContext" . | nindent 8 }}
+      {{- with .Values.pcaService.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pcaService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.pcaService.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- range .Values.pcaService.topologySpreadConstraints }}
+        - {{ toYaml . | nindent 10 | trim }}
+          labelSelector:
+            matchLabels:
+              {{- include "convogent-pca.selectorLabels" $ | nindent 14 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: pca
+          image: {{ include "convogent-pca.image" . }}
+          imagePullPolicy: {{ .Values.pcaService.image.pullPolicy }}
+          securityContext:
+            {{- include "convogent-pca.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - containerPort: {{ .Values.pcaService.service.port }}
+              name: http
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "convogent-pca.name" . }}-config
+            {{- if .Values.pcaService.envFromSecret }}
+            - secretRef:
+                name: {{ .Values.pcaService.envFromSecret }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.pcaService.resources | nindent 12 }}
+          {{- if .Values.pcaService.startupProbe }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.pcaService.startupProbe.path }}
+              port: {{ .Values.pcaService.startupProbe.port }}
+            initialDelaySeconds: {{ .Values.pcaService.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.pcaService.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.pcaService.startupProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.pcaService.startupProbe.failureThreshold | default 10 }}
+          {{- end }}
+          {{- if .Values.pcaService.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.pcaService.livenessProbe.path }}
+              port: {{ .Values.pcaService.livenessProbe.port }}
+            initialDelaySeconds: {{ .Values.pcaService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.pcaService.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.pcaService.livenessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.pcaService.livenessProbe.failureThreshold | default 3 }}
+          {{- end }}
+          {{- if .Values.pcaService.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.pcaService.readinessProbe.path }}
+              port: {{ .Values.pcaService.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.pcaService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.pcaService.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.pcaService.readinessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.pcaService.readinessProbe.failureThreshold | default 3 }}
+          {{- end }}
+          volumeMounts:
+            - name: personal-conversations
+              mountPath: /src/personal_conversations
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: personal-conversations
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,44 @@
+{{- if and .Values.voiceService.enabled ((.Values.voiceService.keda).enabled) }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "convogent-voice.name" . }}
+  namespace: {{ include "convogent-voice.namespace" . }}
+  labels:
+    {{- include "convogent-voice.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "convogent-voice.name" . }}
+  pollingInterval: {{ .Values.voiceService.keda.pollingInterval | default 15 }}
+  cooldownPeriod: {{ .Values.voiceService.keda.cooldownPeriod | default 300 }}
+  minReplicaCount: {{ .Values.voiceService.keda.minReplicas | default 2 }}
+  maxReplicaCount: {{ .Values.voiceService.keda.maxReplicas | default 20 }}
+  {{- if .Values.voiceService.keda.fallback }}
+  fallback:
+    failureThreshold: {{ .Values.voiceService.keda.fallback.failureThreshold | default 3 }}
+    replicas: {{ .Values.voiceService.keda.fallback.replicas | default 2 }}
+  {{- end }}
+  advanced:
+    restoreToOriginalReplicaCount: false
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.voiceService.keda.scaleDownStabilization | default 600 }}
+          policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 120
+          selectPolicy: Min
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+            - type: Pods
+              value: 4
+              periodSeconds: 15
+          selectPolicy: Max
+  triggers:
+    {{- toYaml .Values.voiceService.keda.triggers | nindent 4 }}
+{{- end }}

@@ -1,0 +1,5 @@
+Voice Service deployed successfully!
+
+Service: {{ include "convogent-voice.name" . }}
+Namespace: {{ include "convogent-voice.namespace" . }}
+URL: https://{{ .Values.global.host }}

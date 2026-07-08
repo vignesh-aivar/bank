@@ -1,0 +1,5 @@
+PCA Service deployed successfully!
+
+Service: {{ include "convogent-pca.name" . }}
+Namespace: {{ include "convogent-pca.namespace" . }}
+URL: https://{{ .Values.global.host }}

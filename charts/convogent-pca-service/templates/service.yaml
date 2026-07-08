@@ -1,0 +1,18 @@
+{{- if .Values.pcaService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "convogent-pca.name" . }}
+  namespace: {{ include "convogent-pca.namespace" . }}
+  labels:
+    {{- include "convogent-pca.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.pcaService.service.type }}
+  ports:
+    - port: {{ .Values.pcaService.service.port }}
+      targetPort: {{ .Values.pcaService.service.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "convogent-pca.selectorLabels" . | nindent 4 }}
+{{- end }}

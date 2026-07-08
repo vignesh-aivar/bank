@@ -1,0 +1,100 @@
+{{- if .Values.evalService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "convogent-eval.name" . }}
+  namespace: {{ include "convogent-eval.namespace" . }}
+  labels:
+    {{- include "convogent-eval.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.evalService.replicaCount }}
+  revisionHistoryLimit: {{ .Values.evalService.revisionHistoryLimit | default 5 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ ((.Values.evalService.strategy).maxSurge) | default "25%" }}
+      maxUnavailable: {{ ((.Values.evalService.strategy).maxUnavailable) | default 0 }}
+  selector:
+    matchLabels:
+      {{- include "convogent-eval.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "convogent-eval.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.evalService.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.evalService.serviceAccountName | default .Values.global.serviceAccountName }}
+      terminationGracePeriodSeconds: {{ .Values.evalService.terminationGracePeriodSeconds | default 30 }}
+      securityContext:
+        {{- include "convogent-eval.podSecurityContext" . | nindent 8 }}
+      {{- with .Values.evalService.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.evalService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.evalService.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- range .Values.evalService.topologySpreadConstraints }}
+        - {{ toYaml . | nindent 10 | trim }}
+          labelSelector:
+            matchLabels:
+              {{- include "convogent-eval.selectorLabels" $ | nindent 14 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: eval
+          image: {{ include "convogent-eval.image" . }}
+          imagePullPolicy: {{ .Values.evalService.image.pullPolicy }}
+          securityContext:
+            {{- include "convogent-eval.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - containerPort: {{ .Values.evalService.service.port }}
+              name: http
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "convogent-eval.name" . }}-config
+            {{- if .Values.evalService.envFromSecret }}
+            - secretRef:
+                name: {{ .Values.evalService.envFromSecret }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.evalService.resources | nindent 12 }}
+          {{- if .Values.evalService.startupProbe }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.evalService.startupProbe.path }}
+              port: {{ .Values.evalService.startupProbe.port }}
+            initialDelaySeconds: {{ .Values.evalService.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.evalService.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.evalService.startupProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.evalService.startupProbe.failureThreshold | default 10 }}
+          {{- end }}
+          {{- if .Values.evalService.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.evalService.livenessProbe.path }}
+              port: {{ .Values.evalService.livenessProbe.port }}
+            initialDelaySeconds: {{ .Values.evalService.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.evalService.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.evalService.livenessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.evalService.livenessProbe.failureThreshold | default 3 }}
+          {{- end }}
+          {{- if .Values.evalService.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.evalService.readinessProbe.path }}
+              port: {{ .Values.evalService.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.evalService.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.evalService.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.evalService.readinessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.evalService.readinessProbe.failureThreshold | default 3 }}
+          {{- end }}
+{{- end }}

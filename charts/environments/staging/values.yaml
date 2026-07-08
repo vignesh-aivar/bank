@@ -1,0 +1,563 @@
+# Staging environment — convogent-v2-stage cluster
+# Deployed via ArgoCD from charts/ with this values overlay
+# NOTE: Secrets should be managed via ExternalSecrets, not committed here
+#
+# Stage replica counts — scaled to 0 (shutdown). Restore to 1 when bringing stage back up.
+
+global:
+  namespace: stage
+  environment: stage
+  serviceAccountName: convogentv2-stage-sa
+  serviceAccount:
+    create: true
+    annotations: {}
+  imageRegistry: 368886161280.dkr.ecr.us-east-1.amazonaws.com
+  host: hdfcstage.convogent.ai
+  agentHost: agent.hdfcstage.convogent.ai
+  # Edge routing: argocd-apps/platform/addons/ingress/convogent-stage.yaml (ALB Ingress)
+frontend:
+  enabled: true
+  name: convogentv2-frontend-stage
+  replicaCount: 0
+  image:
+    repository: convogentv2-frontend-stage
+    tag: "9acd37f790955212f2301aeeb82a8a2416a4d252"
+    pullPolicy: Always
+  service:
+    port: 8080
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+  livenessProbe:
+    path: /
+    port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    path: /
+    port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  nodeSelector:
+    NodeGroupType: app
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: app
+      effect: NoSchedule
+  # KEDA event-driven autoscaling — CPU + memory (stateless web tier)
+  keda:
+    enabled: false
+    pollingInterval: 15
+    cooldownPeriod: 300
+    minReplicas: 1
+    maxReplicas: 3
+    scaleDownStabilization: 300
+    triggers:
+      - type: cpu
+        metricType: Utilization
+        metadata:
+          value: "60"
+      - type: memory
+        metricType: Utilization
+        metadata:
+          value: "70"
+backend:
+  enabled: true
+  name: convogentv2-backend-stage
+  replicaCount: 0
+  image:
+    repository: convogentv2-backend-stage
+    tag: "3552582ba6933c9b1e933a394f232d7845decbb3"
+    pullPolicy: Always
+  service:
+    port: 8000
+    type: ClusterIP
+    annotations:
+      alb.ingress.kubernetes.io/healthcheck-path: /health
+      alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+      alb.ingress.kubernetes.io/success-codes: "200"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  startupProbe:
+    path: /health
+    port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 24
+  livenessProbe:
+    path: /health
+    port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    path: /health
+    port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  nodeSelector:
+    NodeGroupType: app
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: app
+      effect: NoSchedule
+  envFromSecret: "convogentv2-backend-secrets-stage"
+  createSecret: false
+  secretName: "convogentv2-backend-secrets-stage"
+  externalSecret:
+    enabled: true
+    refreshInterval: "1m"
+    name: convogentv2-backend-secrets-stage
+    dataFrom:
+      - key: convogent-v2/stage/backend
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+    path: /metrics
+    interval: 30s
+  # Live env from AWS SM (ExternalSecret). Commented block = reference only; uncomment to fall back to ConfigMap.
+  env:
+    # PORT: "8000"
+    # ENV: "stage"
+    # LOG_LEVEL: "info"
+    # MONGODB_DB_NAME: "convogent_stage_db"
+    # KEY_ALT_NAME: "API_ENCRYPTION_DEK_KEY"
+    # KEY_VAULT_NAMESPACE: "convogent_stage_db.__keyVault"
+    # KMS_ENCRYPTION_ENABLED: "0"
+    # KEY_VAULT_COLL: "__keyVault"
+    # MONGO_ENCRYPT_ALGORITHM: "AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic"
+    # S3_BUCKET_ARN: "arn:aws:s3:::convogent-v2-stage"
+    # AGENT_BACKEND_URL: "http://convogentv2-voice-stage.stage.svc.cluster.local:9000/voice_service"
+    # COGNITO_ENABLED: "true"
+    # COGNITO_USER_POOL_ID: "us-east-1_mWnQrDwrV"
+    # COGNITO_DOMAIN: "hdfc-convogent-stage.auth.us-east-1.amazoncognito.com"
+    # COGNITO_REDIRECT_URI: "https://hdfcstage.convogent.ai/api/auth/cognito/token"
+    # COGNITO_SCOPES: "openid profile email"
+    # CONVOGENT_UI_LOGIN_URL: "https://hdfcstage.convogent.ai/auth/login"
+    # CONVOGENT_UI_URL: "https://hdfcstage.convogent.ai"
+    # CONVOGENT_UI_LOGOUT_URI: "https://hdfcstage.convogent.ai/auth/logout"
+    # PROCESS_ENV: "staging"
+    # AWS_REGION: "us-east-1"
+    # ALLOWED_ORIGIN: "https://hdfcstage.convogent.ai,http://localhost:5173"
+    # METRICS_STALE_HOURS: "1"
+    # KAFKA_ENABLED: "true"
+    # KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
+    # KAFKA_SASL_MECHANISM: "AWS_MSK_IAM"
+    # KAFKA_EVAL_REQUESTS_TOPIC: "eval-requests"
+    # KAFKA_CALL_CAMPAIGN_TOPIC: "call-requests"
+    # KAFKA_EVAL_PUBLISH_TOPIC: "publish-eval-requests"
+    # METADATA_PROMPT_NEW: ", then generate :"
+    # ENABLE_TRACING: "true"
+    # OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.monitoring.svc.cluster.local:4317"
+    # OTEL_SERVICE_NAME: "convogent-backend-stage"
+    # MONGO_DB_URI: "mongodb://convogentuser:admin123@convogent-v2-stage-docdb.cluster-cgh4gqq8caer.us-east-1.docdb.amazonaws.com:27017/?tls=true&tlsCAFile=global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"
+    # MONGO_MASTER_KEY: "7Zr6AHA46TGsmNb4Mol4yHvirbic1yBstprtG92Hk1SAEXXTyYPn8ELH8R9BgpBjtgVN7dcnlUdEHnrzj647INeQJoIUdz/xh/0NjXNAaKY85RnqQ1ydfy9QBjRouJ9x"
+    # COGNITO_CLIENT_ID: "1g33l9n56d4stutlq1rludq70l"
+    # COGNITO_CLIENT_SECRET: "1m4coq920lkcoacllo47hrbb3vk4k99p6qt5a8j26iqeq3fuhh1f"
+    # COOKIE_SIGNING_MASTER_KEY: "c96e863e293972a8426eb7bed57242898ffe2fa2f7621587fbd7a1eb2a9ca7e1"
+    # JWT_SECRET: "O5esoOwe7YIMeqpSSkNOmY8npFcKbEW3wILO6rshgXD2FLTY32SXTd3KxOwJkMldFZW_OblI1hdWvzPmr2ejcA"
+    # KAFKA_BOOTSTRAP_SERVERS: "b-1.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-2.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-3.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098"
+    # MSK_ROLE_ARN: "arn:aws:iam::368886161280:role/MSKAppRole"
+  # KEDA event-driven autoscaling (CPU + memory based for dev)
+  keda:
+    enabled: false
+    pollingInterval: 15
+    cooldownPeriod: 180
+    minReplicas: 1
+    maxReplicas: 6
+    scaleDownStabilization: 300
+    triggers:
+      - type: cpu
+        metricType: Utilization
+        metadata:
+          value: "60"
+      - type: memory
+        metricType: Utilization
+        metadata:
+          value: "70"
+# Chat Service (microservice 1)
+chatService:
+  enabled: true
+  name: convogentv2-chat-stage
+  replicaCount: 0
+  image:
+    repository: convogentv2-chat-stage
+    tag: "42d212a58539ef0b1ba03094efc8c80b3decf443"
+    pullPolicy: Always
+  service:
+    port: 9001
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "384Mi"
+      cpu: "200m"
+    limits:
+      memory: "768Mi"
+      cpu: "500m"
+  livenessProbe:
+    path: /chat_service/health
+    port: 9001
+    initialDelaySeconds: 90
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 5
+  readinessProbe:
+    path: /chat_service/health
+    port: 9001
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 5
+  nodeSelector:
+    NodeGroupType: app
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: app
+      effect: NoSchedule
+  envFromSecret: "convogentv2-chat-secrets-stage"
+  externalSecret:
+    enabled: true
+    refreshInterval: "1m"
+    name: convogentv2-chat-secrets-stage
+    dataFrom:
+      - key: convogent-v2/stage/chat
+  env:
+    # AWS_REGION: "us-east-1"
+    # S3_BUCKET: "convogent-v2-conversation"
+    # WEBSOCKET_URL: "wss://chat.hdfcstage.convogent.ai"
+    # FLOW_SERVICE_URL: "http://convogentv2-backend-stage.stage.svc.cluster.local:8000"
+    # FLOW_AGENT_CONFIG_SOURCE: "draft"
+    # FLOW_AGENT_CONFIG_VERSION_ID: ""
+    # BACKEND_AUTH_TOKEN: "voice-agent-backend"
+    # BEDROCK_MODEL: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    # LOG_LEVEL: "INFO"
+    # MCP_ENABLED: "false"
+    # MCP_BASE_URL: ""
+  # KEDA event-driven autoscaling — CPU + memory. Conservative scale-down so
+  # long-lived websocket sessions are drained slowly (see scaledobject.yaml).
+  keda:
+    enabled: false
+    pollingInterval: 15
+    cooldownPeriod: 600
+    minReplicas: 1
+    maxReplicas: 5
+    scaleDownStabilization: 1800
+    triggers:
+      - type: cpu
+        metricType: Utilization
+        metadata:
+          value: "65"
+      - type: memory
+        metricType: Utilization
+        metadata:
+          value: "75"
+# Eval Service (microservice 2)
+evalService:
+  enabled: true
+  name: convogentv2-eval-stage
+  replicaCount: 0
+  image:
+    repository: convogentv2-eval-stage
+    tag: "80fee80524cb195ca1503fe4b37802bcc2919e85"
+    pullPolicy: Always
+  service:
+    port: 9002
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "192Mi"
+      cpu: "150m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    path: /eval_service/health
+    port: 9002
+    initialDelaySeconds: 90
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 5
+  readinessProbe:
+    path: /eval_service/health
+    port: 9002
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 5
+  nodeSelector:
+    NodeGroupType: app
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: app
+      effect: NoSchedule
+  envFromSecret: "convogentv2-eval-secrets-stage"
+  externalSecret:
+    enabled: true
+    refreshInterval: "1m"
+    name: convogentv2-eval-secrets-stage
+    dataFrom:
+      - key: convogent-v2/stage/eval
+  env:
+    # LOG_LEVEL: "INFO"
+    # AWS_REGION: "us-east-1"
+    # S3_BUCKET: "convogent-v2-conversation"
+    # EVAL_SIMULATION_MODEL: "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+    # EVAL_JUDGE_MODEL: "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+    # CHAT_SERVICE_URL: "ws://convogentv2-chat-stage.stage.svc.cluster.local:9001"
+    # FLOW_SERVICE_URL: "http://convogentv2-backend-stage.stage.svc.cluster.local:8000"
+    # FLOW_AGENT_CONFIG_SOURCE: "draft"
+    # FLOW_AGENT_CONFIG_VERSION_ID: ""
+    # BACKEND_AUTH_TOKEN: "voice-agent-backend"
+    # KAFKA_ENABLED: "true"
+    # KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
+    # KAFKA_SASL_MECHANISM: "AWS_MSK_IAM"
+    # KAFKA_EVAL_REQUESTS_TOPIC: "eval-requests"
+    # KAFKA_CONSUMER_GROUP_ID: "eval-consumer-group"
+    # KAFKA_BOOTSTRAP_SERVERS: "b-1.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-2.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-3.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098"
+    # MSK_ROLE_ARN: "arn:aws:iam::368886161280:role/MSKAppRole"
+  # KEDA event-driven autoscaling — CPU + memory (dev baseline)
+  # Kafka consumer lag trigger can be added later via TriggerAuthentication
+  # once MSK bootstrap broker address is available via ExternalSecret.
+  keda:
+    enabled: false
+    pollingInterval: 15
+    cooldownPeriod: 300
+    minReplicas: 1
+    maxReplicas: 5
+    triggers:
+      - type: cpu
+        metricType: Utilization
+        metadata:
+          value: "65"
+      - type: memory
+        metricType: Utilization
+        metadata:
+          value: "75"
+# PCA Service (microservice 3)
+pcaService:
+  enabled: true
+  name: convogentv2-pca-stage
+  replicaCount: 0
+  image:
+    repository: convogentv2-pca-stage
+    tag: "3da539812ba0e112b6e82a91e5b97e851535b042"
+    pullPolicy: Always
+  service:
+    port: 9003
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "192Mi"
+      cpu: "150m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    path: /pca_service/health
+    port: 9003
+    initialDelaySeconds: 90
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 5
+  readinessProbe:
+    path: /pca_service/health
+    port: 9003
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 5
+  nodeSelector:
+    NodeGroupType: app
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: app
+      effect: NoSchedule
+  envFromSecret: "convogentv2-pca-secrets-stage"
+  externalSecret:
+    enabled: true
+    refreshInterval: "1m"
+    name: convogentv2-pca-secrets-stage
+    dataFrom:
+      - key: convogent-v2/stage/pca
+  env:
+    # AWS_REGION: "us-east-1"
+    # S3_BUCKET: "convogent-v2-conversation"
+    # KAFKA_ENABLED: "true"
+    # KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
+    # KAFKA_SASL_MECHANISM: "AWS_MSK_IAM"
+    # KAFKA_CALL_COMPLETED_TOPIC: "call-completed"
+    # KAFKA_CONSUMER_GROUP_ID: "pca-consumer-group"
+    # KAFKA_BOOTSTRAP_SERVERS: "b-1.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-2.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-3.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098"
+    # MSK_ROLE_ARN: "arn:aws:iam::368886161280:role/MSKAppRole"
+    # PCA_AUTH_TOKEN: "voice-agent-backend"
+    # FLOW_SERVICE_URL: "http://convogentv2-backend-stage.stage.svc.cluster.local:8000"
+    # FLOW_AGENT_CONFIG_SOURCE: "draft"
+    # FLOW_AGENT_CONFIG_VERSION_ID: ""
+    # BACKEND_AUTH_TOKEN: "voice-agent-backend"
+    # PCA_BEDROCK_MODEL: "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    # LOG_LEVEL: "INFO"
+  # KEDA event-driven autoscaling — CPU + memory (dev baseline)
+  # PCA is a Kafka consumer — Kafka lag trigger to be layered in later.
+  keda:
+    enabled: false
+    pollingInterval: 15
+    cooldownPeriod: 300
+    minReplicas: 1
+    maxReplicas: 5
+    triggers:
+      - type: cpu
+        metricType: Utilization
+        metadata:
+          value: "65"
+      - type: memory
+        metricType: Utilization
+        metadata:
+          value: "75"
+# Voice Service (microservice 4)
+voiceService:
+  enabled: true
+  name: convogentv2-voice-stage
+  replicaCount: 0
+  image:
+    repository: convogentv2-voice-stage
+    tag: "42d212a58539ef0b1ba03094efc8c80b3decf443"
+    pullPolicy: Always
+  service:
+    port: 9000
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "2.5Gi"
+      cpu: "2000m"
+    limits:
+      memory: "4Gi"
+      cpu: "4"
+  livenessProbe:
+    path: /voice_service/health
+    port: 9000
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  readinessProbe:
+    path: /voice_service/health
+    port: 9000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  nodeSelector:
+    NodeGroupType: agent-voice
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: agent-voice
+      effect: NoSchedule
+  envFromSecret: "convogentv2-voice-secrets-stage"
+  externalSecret:
+    enabled: true
+    refreshInterval: "1m"
+    name: convogentv2-voice-secrets-stage
+    dataFrom:
+      - key: convogent-v2/stage/voice-service
+  env:
+    # S3_BUCKET: "convogent-v2-stage"
+    # AWS_DEFAULT_REGION: "us-east-1"
+    # AWS_REGION: "us-east-1"
+    # HOST: "0.0.0.0"
+    # LOG_LEVEL: "DEBUG"
+    # RECORDINGS_DIR: "sip_call_recordings"
+    # RECORDING_ENABLED: "True"
+    # LOCAL_AUDIO_RECORDING_ENABLED: "True"
+    # BEDROCK_GUARDRAIL_VERSION: "2"
+    # BEDROCK_GUARDRAILS_ENABLED: "true"
+    # RAG_EMBEDDING_MODEL: "amazon.titan-embed-text-v2:0"
+    # RAG_EMBEDDING_DIMENSION: "512"
+    # RAG_EMBEDDING_NORMALIZE: "true"
+    # BACKGROUND_AUDIO_PATH: "data/output_16k_mono.wav"
+    # FLOW_SERVICE_URL: "http://convogentv2-backend-stage.stage.svc.cluster.local:8000"
+    # BACKEND_AUTH_TOKEN: "voice-agent-backend"
+    # LIVEKIT_URL: "wss://livekit.hdfcstage.convogent.ai"
+    # LIVEKIT_API_KEY: "apikey-f08c885db1aa9798"
+    # LIVEKIT_API_SECRET: "ZCoo5vnP1ec1dFzAluM0SWneFH0zmokm7DjJmQecRk6zIFifHF9rzO73DlNcoJYQ"
+    # REDIS_URL: "redis://convogent-v2-stage-livekit-redis.8cgsqi.ng.0001.use1.cache.amazonaws.com:6379"
+    # WEBSOCKET_URL: "ws://localhost:9000"
+    # OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.monitoring.svc.cluster.local:4317"
+    # OTEL_SERVICE_NAME: "convogent-voice-stage"
+    # KAFKA_ENABLED: "true"
+    # KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
+    # KAFKA_SASL_MECHANISM: "AWS_MSK_IAM"
+    # KAFKA_CALL_REQUESTS_TOPIC: "call-requests"
+    # KAFKA_CALL_COMPLETED_TOPIC: "call-completed"
+    # KAFKA_CONSUMER_GROUP_ID: "voice-agent-consumer-group"
+    # KAFKA_BOOTSTRAP_SERVERS: "b-1.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-2.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098,b-3.convogentv2stagemsk.33kree.c12.kafka.us-east-1.amazonaws.com:9098"
+    # MSK_ROLE_ARN: "arn:aws:iam::368886161280:role/MSKAppRole"
+    # FLOW_AGENT_CONFIG_SOURCE: "draft"
+    # FLOW_AGENT_CONFIG_VERSION_ID: ""
+    # CHAT_SESSION_TTL: "3600"
+    # CHAT_HISTORY_MAX_MESSAGES: "100"
+    # EVAL_DEBUG: "false"
+    # TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, X_API_KEY — add to convogent-v2/stage/voice-service JSON when needed
+  preStopSleepSeconds: 30
+  pdb:
+    enabled: false
+  # HPA disabled — KEDA manages the HorizontalPodAutoscaler for this service.
+  # KEDA creates its own HPA and will conflict with this one if both are enabled.
+  autoscaling:
+    enabled: false
+    minReplicas: 0
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 40
+    targetMemoryUtilizationPercentage: ""
+    scaleDownStabilizationWindowSeconds: 3600
+    scaleDownPods: 1
+    scaleDownPeriodSeconds: 120
+    scaleDownSelectPolicy: Min
+    scaleUpStabilizationWindowSeconds: 30
+    scaleUpPeriodSeconds: 15
+  # KEDA event-driven autoscaling — CPU primary (voice workload is CPU-bound)
+  # with a fallback to 2 replicas if scaler fails. Longer cooldown because
+  # voice calls are long-lived and we don't want to evict mid-call.
+  keda:
+    enabled: false
+    pollingInterval: 15
+    cooldownPeriod: 600
+    minReplicas: 1
+    maxReplicas: 20
+    scaleDownStabilization: 3600
+    fallback:
+      failureThreshold: 3
+      replicas: 1
+    triggers:
+      - type: cpu
+        metricType: Utilization
+        metadata:
+          value: "70"
+      - type: memory
+        metricType: Utilization
+        metadata:
+          value: "70"
