@@ -42,3 +42,22 @@ done
 
 kubectl rollout restart deployment -n convogent
 
+
+
+# Get current secret, update the MongoDB URI, push it back
+aws secretsmanager get-secret-value --secret-id convogent/dev/backend --region ap-south-1 \
+  --query SecretString --output text | \
+  jq '.MONGO_DB_URI = "mongodb://<USERNAME>:<PASSWORD>@<DOCDB_ENDPOINT>:27017/?tls=true&tlsCAFile=global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"' | \
+  xargs -0 aws secretsmanager put-secret-value --secret-id convogent/dev/backend --region ap-south-1 --secret-string
+
+SECRET_JSON=$(aws secretsmanager get-secret-value \
+  --secret-id convogent/dev/backend \
+  --region ap-south-1 \
+  --query SecretString --output text)
+
+kubectl delete secret convogent-backend-secrets -n convogent --ignore-not-found
+kubectl create secret generic convogent-backend-secrets \
+  -n convogent \
+  --from-env-file=<(echo "$SECRET_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+
+kubectl rollout restart deployment convogent-backend -n convogent
