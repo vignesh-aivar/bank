@@ -1,0 +1,19 @@
+# ALB Ingress Controller — Client EKS (air-gapped)
+# Image re-pointed to bank's private ECR
+
+clusterName: <CLUSTER_NAME>
+
+image:
+  repository: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/aws-load-balancer-controller
+  tag: v3.4.1
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller
+  annotations: {}
+
+region: ap-south-1
+vpcId: <VPC_ID>
