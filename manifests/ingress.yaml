@@ -1,0 +1,75 @@
+# Single ALB for all Convogent hostnames (AWS Load Balancer Controller + Ingress).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: convogent-ingress
+  namespace: convogent
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: convogent
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: <ACM_CERTIFICATE_ARN>
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=600
+spec:
+  ingressClassName: alb
+  rules:
+    # App + API on primary host (/api before /)
+    - host: <PRIMARY_DOMAIN>
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: convogent-backend
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: convogent-frontend
+                port:
+                  number: 8080
+    - host: <CHAT_DOMAIN>
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: convogent-chat
+                port:
+                  number: 9001
+    - host: <EVAL_DOMAIN>
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: convogent-eval
+                port:
+                  number: 9002
+    - host: <PCA_DOMAIN>
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: convogent-pca
+                port:
+                  number: 9003
+    - host: <AGENT_DOMAIN>
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: convogent-voice
+                port:
+                  number: 9000
