@@ -5,9 +5,9 @@
 global:
   namespace: convogent
   environment: production
-  serviceAccountName: convogent-sa  # fallback (not used when per-service SAs are set)
+  serviceAccountName: convogent-app-sa  # fallback
   serviceAccount:
-    create: false  # disabled globally — each service creates its own
+    create: false
     annotations: {}
   imageRegistry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
   host: ""          # TODO: Set your domain
