@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: livekit-sip
+  namespace: livekit
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: livekit-sip
+  template:
+    metadata:
+      labels:
+        app: livekit-sip
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "6789"
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        workload: livekit-sip
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: livekit-sip
+          effect: NoSchedule
+      containers:
+        - name: sip
+          image: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-sip:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SIP_CONFIG_BODY
+              valueFrom:
+                configMapKeyRef:
+                  name: livekit-sip-config
+                  key: SIP_CONFIG_BODY
+          ports:
+            - containerPort: 5060
+              protocol: UDP
+            - containerPort: 5060
+              protocol: TCP
+            - containerPort: 6789
+              name: metrics
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+      terminationGracePeriodSeconds: 1800

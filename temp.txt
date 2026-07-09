@@ -61,3 +61,34 @@ kubectl create secret generic convogent-backend-secrets \
   --from-env-file=<(echo "$SECRET_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
 
 kubectl rollout restart deployment convogent-backend -n convogent
+
+
+
+
+
+# Pull from your public ECR
+docker pull --platform linux/amd64 public.ecr.aws/i3s3o0q6/livekit-server:v1.9.12
+docker pull --platform linux/amd64 public.ecr.aws/i3s3o0q6/livekit-egress:v1.8.4
+docker pull --platform linux/amd64 public.ecr.aws/i3s3o0q6/livekit-sip:latest
+
+# Auth to bank's private ECR
+aws ecr get-login-password --region ap-south-1 | \
+  docker login --username AWS --password-stdin 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+
+# Create repos (one-time)
+aws ecr create-repository --repository-name livekit-server --region ap-south-1
+aws ecr create-repository --repository-name livekit-egress --region ap-south-1
+aws ecr create-repository --repository-name livekit-sip --region ap-south-1
+
+# Tag for bank ECR
+docker tag public.ecr.aws/i3s3o0q6/livekit-server:v1.9.12 \
+  273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-server:v1.9.12
+docker tag public.ecr.aws/i3s3o0q6/livekit-egress:v1.8.4 \
+  273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-egress:v1.8.4
+docker tag public.ecr.aws/i3s3o0q6/livekit-sip:latest \
+  273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-sip:latest
+
+# Push to bank ECR
+docker push 273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-server:v1.9.12
+docker push 273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-egress:v1.8.4
+docker push 273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-sip:latest
