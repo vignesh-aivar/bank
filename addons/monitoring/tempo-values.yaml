@@ -1,0 +1,134 @@
+# Tempo Distributed — Bank EKS (air-gapped)
+# S3 backend for trace storage, 30d retention
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: <S3_TRACES_BUCKET>
+      endpoint: s3.ap-south-1.amazonaws.com
+      region: ap-south-1
+      insecure: false
+      forcepathstyle: false
+    wal:
+      path: /var/tempo/wal
+
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true
+
+compactor:
+  replicas: 1
+  config:
+    compaction:
+      block_retention: 720h
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+
+metricsGenerator:
+  enabled: false
+
+distributor:
+  replicas: 1
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ingester:
+  replicas: 1
+  config:
+    replication_factor: 1
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  persistence:
+    enabled: true
+    storageClass: gp3
+    size: 10Gi
+
+querier:
+  replicas: 1
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+queryFrontend:
+  replicas: 1
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+gateway:
+  enabled: false
+
+memcached:
+  enabled: false
+
+cache:
+  caches: []
+
+metaMonitoring:
+  serviceMonitor:
+    enabled: true
+
+global:
+  clusterDomain: cluster.local
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: tempo
+
+serviceAccount:
+  create: true
+  name: tempo

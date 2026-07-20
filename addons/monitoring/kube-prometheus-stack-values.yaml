@@ -1,0 +1,246 @@
+# kube-prometheus-stack — Bank EKS (air-gapped)
+# All components pinned to NodeGroupType=monitoring with taint toleration
+
+fullnameOverride: prometheus
+
+#---------------------------------------------------------------
+# Prometheus Operator
+#---------------------------------------------------------------
+prometheusOperator:
+  enabled: true
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: prometheus-operator
+  admissionWebhooks:
+    enabled: false
+  tls:
+    enabled: false
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+#---------------------------------------------------------------
+# Prometheus Server
+#---------------------------------------------------------------
+prometheus:
+  enabled: true
+  prometheusSpec:
+    replicas: 1
+    image:
+      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      repository: prometheus
+    enableRemoteWriteReceiver: true
+    retention: 7d
+    retentionSize: 18GB
+    nodeSelector:
+      NodeGroupType: monitoring
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: monitoring
+        effect: NoSchedule
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelector: {}
+    podMonitorNamespaceSelector: {}
+    ruleSelectorNilUsesHelmValues: false
+    ruleSelector: {}
+    ruleNamespaceSelector: {}
+    externalLabels:
+      cluster: convogent-bank
+    enableFeatures:
+      - expand-external-labels
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      fsGroup: 2000
+
+#---------------------------------------------------------------
+# Alertmanager
+#---------------------------------------------------------------
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    replicas: 1
+    image:
+      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      repository: alertmanager
+    nodeSelector:
+      NodeGroupType: monitoring
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: monitoring
+        effect: NoSchedule
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['namespace', 'alertname', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'null'
+    receivers:
+      - name: 'null'
+
+#---------------------------------------------------------------
+# Grafana
+#---------------------------------------------------------------
+grafana:
+  enabled: true
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: grafana
+  replicas: 1
+  adminUser: admin
+  adminPassword: "changeme"  # TODO: Change this
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: gp3
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      labelValue: "1"
+      searchNamespace: ALL
+  additionalDataSources:
+    - name: Tempo
+      type: tempo
+      url: http://tempo-query-frontend.monitoring.svc.cluster.local:3200
+      access: proxy
+      isDefault: false
+    - name: Loki
+      type: loki
+      url: http://loki-gateway.monitoring.svc.cluster.local
+      access: proxy
+      isDefault: false
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+#---------------------------------------------------------------
+# Node Exporter (DaemonSet — needs to run on ALL nodes)
+#---------------------------------------------------------------
+nodeExporter:
+  enabled: true
+  tolerations:
+    - operator: Exists
+
+prometheus-node-exporter:
+  tolerations:
+    - operator: Exists
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: node-exporter
+
+#---------------------------------------------------------------
+# Kube State Metrics
+#---------------------------------------------------------------
+kubeStateMetrics:
+  enabled: true
+
+kube-state-metrics:
+  replicas: 1
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: kube-state-metrics
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+#---------------------------------------------------------------
+# Default Rules & Scraping
+#---------------------------------------------------------------
+defaultRules:
+  create: true
+
+kubeApiServer:
+  enabled: true
+
+kubeProxy:
+  enabled: true
+
+kubelet:
+  enabled: true

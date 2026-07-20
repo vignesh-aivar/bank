@@ -1,0 +1,142 @@
+# Loki — Bank EKS (air-gapped)
+# SingleBinary mode, filesystem storage, 7d retention
+
+deploymentMode: SingleBinary
+
+fullnameOverride: loki
+
+global:
+  clusterDomain: "cluster.local"
+
+loki:
+  auth_enabled: false
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: loki
+
+  commonConfig:
+    replication_factor: 1
+
+  ingester:
+    chunk_encoding: snappy
+    chunk_idle_period: 30m
+    chunk_block_size: 262144
+    chunk_retain_period: 1m
+    wal:
+      enabled: true
+      dir: /var/loki/wal
+      flush_on_shutdown: true
+
+  limits_config:
+    ingestion_rate_mb: 10
+    ingestion_burst_size_mb: 20
+    max_query_length: 721h
+    max_query_parallelism: 16
+    max_streams_per_user: 5000
+    max_line_size: 256KB
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+    retention_period: 168h
+
+  compactor:
+    working_directory: /var/loki/compactor
+    compaction_interval: 10m
+    retention_enabled: true
+    delete_request_store: filesystem
+    retention_delete_delay: 2h
+
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+
+  storage:
+    type: filesystem
+    filesystem:
+      chunks_directory: /var/loki/chunks
+      rules_directory: /var/loki/rules
+
+singleBinary:
+  replicas: 1
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: gp3
+
+write:
+  replicas: 0
+
+read:
+  replicas: 0
+
+backend:
+  replicas: 0
+
+gateway:
+  enabled: true
+  replicas: 1
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: nginx-unprivileged
+  nodeSelector:
+    NodeGroupType: monitoring
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+serviceAccount:
+  create: true
+  name: loki
+
+monitoring:
+  dashboards:
+    enabled: false
+  rules:
+    enabled: false
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false
+
+minio:
+  enabled: false
+
+test:
+  enabled: false
+
+lokiCanary:
+  enabled: false
