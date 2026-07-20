@@ -139,6 +139,29 @@ grafana:
   image:
     registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
     repository: grafana
+  initChownData:
+    image:
+      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      repository: busybox
+      tag: "1.31.1"
+  sidecar:
+    image:
+      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      repository: k8s-sidecar
+      tag: "1.30.0"
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      labelValue: "1"
+      searchNamespace: ALL
   replicas: 1
   adminUser: admin
   adminPassword: "changeme"  # TODO: Change this
@@ -163,20 +186,6 @@ grafana:
     accessModes:
       - ReadWriteOnce
     size: 5Gi
-  sidecar:
-    dashboards:
-      enabled: true
-      label: grafana_dashboard
-      labelValue: "1"
-      searchNamespace: ALL
-      folderAnnotation: grafana_folder
-      provider:
-        foldersFromFilesStructure: true
-    datasources:
-      enabled: true
-      label: grafana_datasource
-      labelValue: "1"
-      searchNamespace: ALL
   additionalDataSources:
     - name: Tempo
       type: tempo
