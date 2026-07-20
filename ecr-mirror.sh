@@ -21,6 +21,7 @@ IMAGES=(
   "tempo:2.9.0"
   "otel-collector-contrib:0.118.0"
   "prometheus-adapter:v0.12.0"
+  "prometheus-config-reloader:v0.82.0"
   "busybox:1.31.1"
 )
 
