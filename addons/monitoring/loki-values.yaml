@@ -112,6 +112,12 @@ gateway:
       cpu: 200m
       memory: 128Mi
 
+sidecar:
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    repository: k8s-sidecar
+    tag: 1.30.0
+
 serviceAccount:
   create: true
   name: loki
