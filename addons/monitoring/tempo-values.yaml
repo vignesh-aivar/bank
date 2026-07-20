@@ -127,7 +127,12 @@ global:
   clusterDomain: cluster.local
   image:
     registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+
+tempo:
+  image:
+    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
     repository: tempo
+    tag: 2.9.0
 
 serviceAccount:
   create: true
