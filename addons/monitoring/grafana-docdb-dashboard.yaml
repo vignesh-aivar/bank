@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-docdb-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "DocumentDB"
+data:
+  docdb-dashboard.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "title": "DocumentDB Overview",
+      "uid": "docdb-overview",
+      "version": 1,
+      "templating": {
+        "list": [
+          {
+            "name": "database",
+            "type": "query",
+            "label": "Database",
+            "datasource": "Prometheus",
+            "query": "label_values(mongodb_dbstats_collections{job=\"docdb-exporter\"}, database)",
+            "refresh": 1,
+            "includeAll": true,
+            "multi": false,
+            "current": { "value": "$__all", "text": "All" }
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "Replica Set Health",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [{ "expr": "mongodb_members_health{job=\"docdb-exporter\", member_state=\"PRIMARY\"}", "legendFormat": "{{member_idx}}" }],
+          "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "1": { "text": "Healthy", "color": "green" }, "0": { "text": "Down", "color": "red" } } }] } }
+        },
+        {
+          "title": "Member State",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [{ "expr": "mongodb_members_state{job=\"docdb-exporter\"}", "legendFormat": "{{member_state}}" }]
+        },
+        {
+          "title": "Uptime (hours)",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "targets": [{ "expr": "mongodb_members_uptime{job=\"docdb-exporter\"} / 3600", "legendFormat": "{{member_idx}}" }],
+          "fieldConfig": { "defaults": { "unit": "h", "decimals": 1 } }
+        },
+        {
+          "title": "Collections per Database",
+          "type": "bargauge",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "targets": [{ "expr": "mongodb_dbstats_collections{job=\"docdb-exporter\", database=~\"$database\"}", "legendFormat": "{{database}}" }]
+        },
+        {
+          "title": "Storage Size per Database",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "targets": [{ "expr": "mongodb_dbstats_storageSize{job=\"docdb-exporter\", database=~\"$database\"}", "legendFormat": "{{database}}" }],
+          "fieldConfig": { "defaults": { "unit": "bytes" } }
+        },
+        {
+          "title": "Index Size per Database",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [{ "expr": "mongodb_dbstats_indexSize{job=\"docdb-exporter\", database=~\"$database\"}", "legendFormat": "{{database}}" }],
+          "fieldConfig": { "defaults": { "unit": "bytes" } }
+        },
+        {
+          "title": "Document Count per Database",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "targets": [{ "expr": "mongodb_dbstats_objects{job=\"docdb-exporter\", database=~\"$database\"}", "legendFormat": "{{database}}" }]
+        },
+        {
+          "title": "Indexes per Database",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "targets": [{ "expr": "mongodb_dbstats_indexes{job=\"docdb-exporter\", database=~\"$database\"}", "legendFormat": "{{database}}" }]
+        },
+        {
+          "title": "File Size per Database",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+          "targets": [{ "expr": "mongodb_dbstats_fileSize{job=\"docdb-exporter\", database=~\"$database\"}", "legendFormat": "{{database}}" }],
+          "fieldConfig": { "defaults": { "unit": "bytes" } }
+        }
+      ],
+      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "30s",
+      "schemaVersion": 39
+    }

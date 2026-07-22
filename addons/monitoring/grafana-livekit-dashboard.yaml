@@ -1,0 +1,302 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-livekit-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "LiveKit"
+data:
+  livekit-dashboard.json: |
+    {
+      "uid": "livekit-all",
+      "title": "LiveKit - Server, Egress, SIP",
+      "tags": ["livekit"],
+      "timezone": "utc",
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+
+        { "id": 1, "type": "row", "title": "LiveKit Server", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false },
+
+        {
+          "id": 2, "type": "stat", "title": "Active Participants",
+          "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_participant_total{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 100, "color": "yellow" }, { "value": 500, "color": "red" }] } } }
+        },
+        {
+          "id": 3, "type": "stat", "title": "Active Rooms",
+          "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_room_total{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 50, "color": "yellow" }, { "value": 200, "color": "red" }] } } }
+        },
+        {
+          "id": 4, "type": "stat", "title": "Participant Join Rate (5m)",
+          "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(rate(livekit_participant_join_total{cluster=\"convogent-v2-stage\"}[5m])) * 60", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "fieldConfig": { "defaults": { "unit": "reqpm" } }
+        },
+        {
+          "id": 5, "type": "stat", "title": "Server Replicas",
+          "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+          "targets": [{ "expr": "count(up{cluster=\"convogent-v2-stage\", app=\"livekit-server\"} == 1)", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 1, "color": "green" }] } } }
+        },
+        {
+          "id": 6, "type": "stat", "title": "Server CPU Load",
+          "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+          "targets": [{ "expr": "avg(livekit_node_cpu_load{cluster=\"convogent-v2-stage\", app=\"livekit-server\"}) * 100", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 70, "color": "yellow" }, { "value": 90, "color": "red" }] } } }
+        },
+        {
+          "id": 7, "type": "stat", "title": "Webhook Queue",
+          "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_webhook_queue_length_sum{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 10, "color": "yellow" }, { "value": 50, "color": "red" }] } } }
+        },
+
+        {
+          "id": 8, "type": "timeseries", "title": "Participants & Rooms Over Time",
+          "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(livekit_participant_total{cluster=\"convogent-v2-stage\"})", "legendFormat": "Participants", "datasource": { "type": "prometheus" } },
+            { "expr": "sum(livekit_room_total{cluster=\"convogent-v2-stage\"})", "legendFormat": "Rooms", "datasource": { "type": "prometheus" } }
+          ]
+        },
+        {
+          "id": 9, "type": "timeseries", "title": "Participant Join Rate",
+          "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(livekit_participant_join_total{cluster=\"convogent-v2-stage\"}[5m])) by (state)", "legendFormat": "{{state}}", "datasource": { "type": "prometheus" } }
+          ]
+        },
+
+        {
+          "id": 10, "type": "timeseries", "title": "Server CPU & Memory",
+          "gridPos": { "x": 0, "y": 13, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=\"convogent-v2-stage\", namespace=\"livekit\", pod=~\"livekit-server.*\", container!=\"\"}[5m])) by (pod) * 1000", "legendFormat": "CPU {{pod}} (m)", "datasource": { "type": "prometheus" } },
+            { "expr": "sum(container_memory_working_set_bytes{cluster=\"convogent-v2-stage\", namespace=\"livekit\", pod=~\"livekit-server.*\", container!=\"\"}) by (pod) / 1024 / 1024", "legendFormat": "Mem {{pod}} (MB)", "datasource": { "type": "prometheus" } }
+          ]
+        },
+        {
+          "id": 11, "type": "timeseries", "title": "Network Traffic (Server)",
+          "gridPos": { "x": 12, "y": 13, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(livekit_packet_bytes{cluster=\"convogent-v2-stage\", direction=\"in\"}[5m]))", "legendFormat": "Bytes In", "datasource": { "type": "prometheus" } },
+            { "expr": "sum(rate(livekit_packet_bytes{cluster=\"convogent-v2-stage\", direction=\"out\"}[5m]))", "legendFormat": "Bytes Out", "datasource": { "type": "prometheus" } }
+          ],
+          "fieldConfig": { "defaults": { "unit": "Bps" } }
+        },
+
+        {
+          "id": 12, "type": "timeseries", "title": "Packet Loss %",
+          "gridPos": { "x": 0, "y": 21, "w": 8, "h": 7 },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(livekit_packet_loss_percent_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p95 Packet Loss %", "datasource": { "type": "prometheus" } },
+            { "expr": "histogram_quantile(0.50, sum(rate(livekit_packet_loss_percent_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p50 Packet Loss %", "datasource": { "type": "prometheus" } }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percent" } }
+        },
+        {
+          "id": 13, "type": "timeseries", "title": "RTT (ms)",
+          "gridPos": { "x": 8, "y": 21, "w": 8, "h": 7 },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(livekit_rtt_ms_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p95 RTT", "datasource": { "type": "prometheus" } },
+            { "expr": "histogram_quantile(0.50, sum(rate(livekit_rtt_ms_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p50 RTT", "datasource": { "type": "prometheus" } }
+          ],
+          "fieldConfig": { "defaults": { "unit": "ms" } }
+        },
+        {
+          "id": 14, "type": "timeseries", "title": "Jitter (us)",
+          "gridPos": { "x": 16, "y": 21, "w": 8, "h": 7 },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(livekit_jitter_us_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p95 Jitter", "datasource": { "type": "prometheus" } },
+            { "expr": "histogram_quantile(0.50, sum(rate(livekit_jitter_us_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p50 Jitter", "datasource": { "type": "prometheus" } }
+          ],
+          "fieldConfig": { "defaults": { "unit": "µs" } }
+        },
+
+        {
+          "id": 15, "type": "timeseries", "title": "Quality Score Distribution",
+          "gridPos": { "x": 0, "y": 28, "w": 12, "h": 7 },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(livekit_quality_score_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p95 Quality Score", "datasource": { "type": "prometheus" } },
+            { "expr": "histogram_quantile(0.50, sum(rate(livekit_quality_score_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p50 Quality Score", "datasource": { "type": "prometheus" } }
+          ]
+        },
+        {
+          "id": 16, "type": "timeseries", "title": "Track Publish/Subscribe Rate",
+          "gridPos": { "x": 12, "y": 28, "w": 12, "h": 7 },
+          "targets": [
+            { "expr": "sum(rate(livekit_track_published_total{cluster=\"convogent-v2-stage\"}[5m]))", "legendFormat": "Published/s", "datasource": { "type": "prometheus" } },
+            { "expr": "sum(rate(livekit_track_subscribed_total{cluster=\"convogent-v2-stage\"}[5m]))", "legendFormat": "Subscribed/s", "datasource": { "type": "prometheus" } }
+          ]
+        },
+
+        { "id": 30, "type": "row", "title": "Egress", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 }, "collapsed": false },
+
+        {
+          "id": 31, "type": "stat", "title": "Active Egress Jobs",
+          "gridPos": { "x": 0, "y": 36, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_egress_requests{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 50, "color": "yellow" }, { "value": 100, "color": "red" }] } } }
+        },
+        {
+          "id": 32, "type": "stat", "title": "Egress Replicas",
+          "gridPos": { "x": 4, "y": 36, "w": 4, "h": 4 },
+          "targets": [{ "expr": "count(up{cluster=\"convogent-v2-stage\", app=\"egress\"} == 1)", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 1, "color": "green" }] } } }
+        },
+        {
+          "id": 33, "type": "stat", "title": "Can Accept Requests",
+          "gridPos": { "x": 8, "y": 36, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_egress_can_accept_request{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 1, "color": "green" }] } } }
+        },
+        {
+          "id": 34, "type": "stat", "title": "Pipeline Uploads (1h)",
+          "gridPos": { "x": 12, "y": 36, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(increase(livekit_egress_pipeline_uploads{cluster=\"convogent-v2-stage\"}[1h]))", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "id": 35, "type": "stat", "title": "Egress CPU Load",
+          "gridPos": { "x": 16, "y": 36, "w": 4, "h": 4 },
+          "targets": [{ "expr": "avg(livekit_node_cpu_load{cluster=\"convogent-v2-stage\", app=\"egress\"}) * 100", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 70, "color": "yellow" }, { "value": 90, "color": "red" }] } } }
+        },
+        {
+          "id": 36, "type": "stat", "title": "Egress Disabled",
+          "gridPos": { "x": 20, "y": 36, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_egress_is_disabled{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 1, "color": "red" }] } } }
+        },
+
+        {
+          "id": 37, "type": "timeseries", "title": "Active Egress Jobs by Type",
+          "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(livekit_egress_requests{cluster=\"convogent-v2-stage\"}) by (type)", "legendFormat": "{{type}}", "datasource": { "type": "prometheus" } }
+          ]
+        },
+        {
+          "id": 38, "type": "timeseries", "title": "Upload Response Time (ms)",
+          "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(livekit_egress_pipline_upload_response_time_ms_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p95 Upload Time", "datasource": { "type": "prometheus" } },
+            { "expr": "histogram_quantile(0.50, sum(rate(livekit_egress_pipline_upload_response_time_ms_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p50 Upload Time", "datasource": { "type": "prometheus" } }
+          ],
+          "fieldConfig": { "defaults": { "unit": "ms" } }
+        },
+
+        {
+          "id": 39, "type": "timeseries", "title": "Egress CPU & Memory",
+          "gridPos": { "x": 0, "y": 48, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=\"convogent-v2-stage\", namespace=\"livekit\", pod=~\"livekit-egress.*\", container!=\"\"}[5m])) by (pod) * 1000", "legendFormat": "CPU {{pod}} (m)", "datasource": { "type": "prometheus" } },
+            { "expr": "sum(container_memory_working_set_bytes{cluster=\"convogent-v2-stage\", namespace=\"livekit\", pod=~\"livekit-egress.*\", container!=\"\"}) by (pod) / 1024 / 1024", "legendFormat": "Mem {{pod}} (MB)", "datasource": { "type": "prometheus" } }
+          ]
+        },
+        {
+          "id": 40, "type": "timeseries", "title": "Egress HPA Scaling",
+          "gridPos": { "x": 12, "y": 48, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(livekit_egress_requests{cluster=\"convogent-v2-stage\"})", "legendFormat": "Total Active Jobs", "datasource": { "type": "prometheus" } },
+            { "expr": "count(up{cluster=\"convogent-v2-stage\", app=\"egress\"} == 1) * 18", "legendFormat": "Capacity (18 jobs/pod)", "datasource": { "type": "prometheus" } }
+          ]
+        },
+
+        { "id": 50, "type": "row", "title": "SIP", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 }, "collapsed": false },
+
+        {
+          "id": 51, "type": "stat", "title": "Active SIP Calls",
+          "gridPos": { "x": 0, "y": 57, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_sip_calls_active{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 50, "color": "yellow" }, { "value": 200, "color": "red" }] } } }
+        },
+        {
+          "id": 52, "type": "stat", "title": "SIP Calls Terminated (1h)",
+          "gridPos": { "x": 4, "y": 57, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(increase(livekit_sip_calls_terminated{cluster=\"convogent-v2-stage\"}[1h]))", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "id": 53, "type": "stat", "title": "SIP Invite Requests (1h)",
+          "gridPos": { "x": 8, "y": 57, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(increase(livekit_sip_invite_requests{cluster=\"convogent-v2-stage\"}[1h]))", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+        },
+        {
+          "id": 54, "type": "stat", "title": "SIP Invite Accept Rate",
+          "gridPos": { "x": 12, "y": 57, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_sip_invite_accepted{cluster=\"convogent-v2-stage\"}) / sum(livekit_sip_invite_requests{cluster=\"convogent-v2-stage\"}) * 100", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 80, "color": "yellow" }, { "value": 95, "color": "green" }] } } }
+        },
+        {
+          "id": 55, "type": "stat", "title": "SIP Available",
+          "gridPos": { "x": 16, "y": 57, "w": 4, "h": 4 },
+          "targets": [{ "expr": "sum(livekit_sip_available{cluster=\"convogent-v2-stage\"})", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 1, "color": "green" }] } } }
+        },
+        {
+          "id": 56, "type": "stat", "title": "SIP Replicas",
+          "gridPos": { "x": 20, "y": 57, "w": 4, "h": 4 },
+          "targets": [{ "expr": "count(up{cluster=\"convogent-v2-stage\", namespace=\"livekit\", pod=~\"livekit-sip.*\"} == 1)", "datasource": { "type": "prometheus" } }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 1, "color": "green" }] } } }
+        },
+
+        {
+          "id": 57, "type": "timeseries", "title": "SIP Active Calls Over Time",
+          "gridPos": { "x": 0, "y": 61, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(livekit_sip_calls_active{cluster=\"convogent-v2-stage\"}) by (dir)", "legendFormat": "{{dir}}", "datasource": { "type": "prometheus" } }
+          ]
+        },
+        {
+          "id": 58, "type": "timeseries", "title": "SIP Call Duration (p50/p95)",
+          "gridPos": { "x": 12, "y": 61, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(livekit_sip_dur_session_sec_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p95 Session Duration", "datasource": { "type": "prometheus" } },
+            { "expr": "histogram_quantile(0.50, sum(rate(livekit_sip_dur_session_sec_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p50 Session Duration", "datasource": { "type": "prometheus" } },
+            { "expr": "histogram_quantile(0.95, sum(rate(livekit_sip_dur_join_sec_bucket{cluster=\"convogent-v2-stage\"}[5m])) by (le))", "legendFormat": "p95 Join Time", "datasource": { "type": "prometheus" } }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        },
+
+        {
+          "id": 59, "type": "timeseries", "title": "SIP Invite Rate",
+          "gridPos": { "x": 0, "y": 69, "w": 12, "h": 7 },
+          "targets": [
+            { "expr": "sum(rate(livekit_sip_invite_requests{cluster=\"convogent-v2-stage\"}[5m]))", "legendFormat": "Invites/s", "datasource": { "type": "prometheus" } },
+            { "expr": "sum(rate(livekit_sip_invite_accepted{cluster=\"convogent-v2-stage\"}[5m]))", "legendFormat": "Accepted/s", "datasource": { "type": "prometheus" } }
+          ]
+        },
+        {
+          "id": 60, "type": "timeseries", "title": "SIP CPU & Memory",
+          "gridPos": { "x": 12, "y": 69, "w": 12, "h": 7 },
+          "targets": [
+            { "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=\"convogent-v2-stage\", namespace=\"livekit\", pod=~\"livekit-sip.*\", container!=\"\"}[5m])) by (pod) * 1000", "legendFormat": "CPU {{pod}} (m)", "datasource": { "type": "prometheus" } },
+            { "expr": "sum(container_memory_working_set_bytes{cluster=\"convogent-v2-stage\", namespace=\"livekit\", pod=~\"livekit-sip.*\", container!=\"\"}) by (pod) / 1024 / 1024", "legendFormat": "Mem {{pod}} (MB)", "datasource": { "type": "prometheus" } }
+          ]
+        }
+
+      ]
+    }

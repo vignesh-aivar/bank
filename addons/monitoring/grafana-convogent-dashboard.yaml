@@ -1,0 +1,274 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-convogent-app-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Convogent"
+data:
+  convogent-app-dashboard.json: |
+    {
+      "uid": "convogent-app",
+      "title": "Convogent - Stage",
+      "description": "CPU, memory, network, and disk I/O for Convogent microservices in namespace stage",
+      "tags": ["convogent", "stage"],
+      "timezone": "browser",
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+        { "id": 100, "type": "row", "title": "Stage namespace", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false },
+        {
+          "id": 101, "type": "stat", "title": "Deployments",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "count(kube_deployment_spec_replicas{namespace=\"stage\"})" }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 102, "type": "stat", "title": "StatefulSets",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "count(kube_statefulset_replicas{namespace=\"stage\"})" }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 103, "type": "stat", "title": "Services",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "count(kube_service_info{namespace=\"stage\"})" }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 104, "type": "stat", "title": "Ingresses",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "count(kube_ingress_info{namespace=\"stage\"})" }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 105, "type": "stat", "title": "Running pods",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 5 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "count(kube_pod_status_phase{namespace=\"stage\", phase=\"Running\"} == 1)" }],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        { "id": 4, "type": "row", "title": "Backend", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 }, "collapsed": false },
+        {
+          "id": 5, "type": "timeseries", "title": "CPU - Backend",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"stage\", pod=~\"convogentv2-backend.*\", container!=\"\", container!=\"POD\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 6, "type": "timeseries", "title": "Memory - Backend",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(container_memory_working_set_bytes{namespace=\"stage\", pod=~\"convogentv2-backend.*\", container!=\"\", container!=\"POD\"}) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 30, "type": "timeseries", "title": "Network IO - Backend",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } },
+          "targets": [
+            { "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"stage\", pod=~\"convogentv2-backend.*\"}[5m])) by (pod)", "legendFormat": "rx/{{pod}}" },
+            { "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"stage\", pod=~\"convogentv2-backend.*\"}[5m])) by (pod)", "legendFormat": "tx/{{pod}}" }
+          ]
+        },
+        {
+          "id": 31, "type": "timeseries", "title": "Disk IO - Backend",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "noValue": "0", "custom": { "lineWidth": 2, "spanNulls": true } } },
+          "targets": [
+            { "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"stage\", pod=~\"convogentv2-backend.*\", container=\"backend\"}[5m]) or rate(container_fs_reads_total{namespace=\"stage\", pod=~\"convogentv2-backend.*\", container=\"backend\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-backend.*\"}))", "legendFormat": "read/{{pod}}" },
+            { "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"stage\", pod=~\"convogentv2-backend.*\", container=\"backend\"}[5m]) or rate(container_fs_writes_total{namespace=\"stage\", pod=~\"convogentv2-backend.*\", container=\"backend\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-backend.*\"}))", "legendFormat": "write/{{pod}}" }
+          ]
+        },
+        { "id": 7, "type": "row", "title": "Frontend", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 }, "collapsed": false },
+        {
+          "id": 8, "type": "timeseries", "title": "CPU - Frontend",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"stage\", pod=~\"convogentv2-frontend.*\", container!=\"\", container!=\"POD\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 9, "type": "timeseries", "title": "Memory - Frontend",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(container_memory_working_set_bytes{namespace=\"stage\", pod=~\"convogentv2-frontend.*\", container!=\"\", container!=\"POD\"}) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 32, "type": "timeseries", "title": "Network IO - Frontend",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 35 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } },
+          "targets": [
+            { "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"stage\", pod=~\"convogentv2-frontend.*\"}[5m])) by (pod)", "legendFormat": "rx/{{pod}}" },
+            { "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"stage\", pod=~\"convogentv2-frontend.*\"}[5m])) by (pod)", "legendFormat": "tx/{{pod}}" }
+          ]
+        },
+        {
+          "id": 33, "type": "timeseries", "title": "Disk IO - Frontend",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 35 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "noValue": "0", "custom": { "lineWidth": 2, "spanNulls": true } } },
+          "targets": [
+            { "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"stage\", pod=~\"convogentv2-frontend.*\", container=\"frontend\"}[5m]) or rate(container_fs_reads_total{namespace=\"stage\", pod=~\"convogentv2-frontend.*\", container=\"frontend\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-frontend.*\"}))", "legendFormat": "read/{{pod}}" },
+            { "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"stage\", pod=~\"convogentv2-frontend.*\", container=\"frontend\"}[5m]) or rate(container_fs_writes_total{namespace=\"stage\", pod=~\"convogentv2-frontend.*\", container=\"frontend\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-frontend.*\"}))", "legendFormat": "write/{{pod}}" }
+          ]
+        },
+        { "id": 10, "type": "row", "title": "Chat Service", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 }, "collapsed": false },
+        {
+          "id": 11, "type": "timeseries", "title": "CPU - Chat Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"stage\", pod=~\"convogentv2-chat.*\", container!=\"\", container!=\"POD\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 12, "type": "timeseries", "title": "Memory - Chat Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(container_memory_working_set_bytes{namespace=\"stage\", pod=~\"convogentv2-chat.*\", container!=\"\", container!=\"POD\"}) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 13, "type": "timeseries", "title": "Network IO - Chat Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } },
+          "targets": [
+            { "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"stage\", pod=~\"convogentv2-chat.*\"}[5m])) by (pod)", "legendFormat": "rx/{{pod}}" },
+            { "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"stage\", pod=~\"convogentv2-chat.*\"}[5m])) by (pod)", "legendFormat": "tx/{{pod}}" }
+          ]
+        },
+        {
+          "id": 14, "type": "timeseries", "title": "Disk IO - Chat Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "noValue": "0", "custom": { "lineWidth": 2, "spanNulls": true } } },
+          "targets": [
+            { "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"stage\", pod=~\"convogentv2-chat.*\", container=\"chat\"}[5m]) or rate(container_fs_reads_total{namespace=\"stage\", pod=~\"convogentv2-chat.*\", container=\"chat\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-chat.*\"}))", "legendFormat": "read/{{pod}}" },
+            { "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"stage\", pod=~\"convogentv2-chat.*\", container=\"chat\"}[5m]) or rate(container_fs_writes_total{namespace=\"stage\", pod=~\"convogentv2-chat.*\", container=\"chat\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-chat.*\"}))", "legendFormat": "write/{{pod}}" }
+          ]
+        },
+        { "id": 15, "type": "row", "title": "Eval Service", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 60 }, "collapsed": false },
+        {
+          "id": 16, "type": "timeseries", "title": "CPU - Eval Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 61 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"stage\", pod=~\"convogentv2-eval.*\", container!=\"\", container!=\"POD\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 17, "type": "timeseries", "title": "Memory - Eval Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 61 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(container_memory_working_set_bytes{namespace=\"stage\", pod=~\"convogentv2-eval.*\", container!=\"\", container!=\"POD\"}) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 18, "type": "timeseries", "title": "Network IO - Eval Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 69 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } },
+          "targets": [
+            { "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"stage\", pod=~\"convogentv2-eval.*\"}[5m])) by (pod)", "legendFormat": "rx/{{pod}}" },
+            { "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"stage\", pod=~\"convogentv2-eval.*\"}[5m])) by (pod)", "legendFormat": "tx/{{pod}}" }
+          ]
+        },
+        {
+          "id": 19, "type": "timeseries", "title": "Disk IO - Eval Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 69 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "noValue": "0", "custom": { "lineWidth": 2, "spanNulls": true } } },
+          "targets": [
+            { "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"stage\", pod=~\"convogentv2-eval.*\", container=\"eval\"}[5m]) or rate(container_fs_reads_total{namespace=\"stage\", pod=~\"convogentv2-eval.*\", container=\"eval\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-eval.*\"}))", "legendFormat": "read/{{pod}}" },
+            { "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"stage\", pod=~\"convogentv2-eval.*\", container=\"eval\"}[5m]) or rate(container_fs_writes_total{namespace=\"stage\", pod=~\"convogentv2-eval.*\", container=\"eval\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-eval.*\"}))", "legendFormat": "write/{{pod}}" }
+          ]
+        },
+        { "id": 20, "type": "row", "title": "PCA Service", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 77 }, "collapsed": false },
+        {
+          "id": 21, "type": "timeseries", "title": "CPU - PCA Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 78 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"stage\", pod=~\"convogentv2-pca.*\", container!=\"\", container!=\"POD\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 22, "type": "timeseries", "title": "Memory - PCA Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 78 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(container_memory_working_set_bytes{namespace=\"stage\", pod=~\"convogentv2-pca.*\", container!=\"\", container!=\"POD\"}) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 23, "type": "timeseries", "title": "Network IO - PCA Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 86 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } },
+          "targets": [
+            { "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"stage\", pod=~\"convogentv2-pca.*\"}[5m])) by (pod)", "legendFormat": "rx/{{pod}}" },
+            { "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"stage\", pod=~\"convogentv2-pca.*\"}[5m])) by (pod)", "legendFormat": "tx/{{pod}}" }
+          ]
+        },
+        {
+          "id": 24, "type": "timeseries", "title": "Disk IO - PCA Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 86 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "noValue": "0", "custom": { "lineWidth": 2, "spanNulls": true } } },
+          "targets": [
+            { "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"stage\", pod=~\"convogentv2-pca.*\", container=\"pca\"}[5m]) or rate(container_fs_reads_total{namespace=\"stage\", pod=~\"convogentv2-pca.*\", container=\"pca\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-pca.*\"}))", "legendFormat": "read/{{pod}}" },
+            { "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"stage\", pod=~\"convogentv2-pca.*\", container=\"pca\"}[5m]) or rate(container_fs_writes_total{namespace=\"stage\", pod=~\"convogentv2-pca.*\", container=\"pca\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-pca.*\"}))", "legendFormat": "write/{{pod}}" }
+          ]
+        },
+        { "id": 25, "type": "row", "title": "Voice Service", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 94 }, "collapsed": false },
+        {
+          "id": 26, "type": "timeseries", "title": "CPU - Voice Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 95 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"stage\", pod=~\"convogentv2-voice.*\", container!=\"\", container!=\"POD\"}[5m])) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 27, "type": "timeseries", "title": "Memory - Voice Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 95 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 } } },
+          "targets": [{ "expr": "sum(container_memory_working_set_bytes{namespace=\"stage\", pod=~\"convogentv2-voice.*\", container!=\"\", container!=\"POD\"}) by (pod)", "legendFormat": "{{pod}}" }]
+        },
+        {
+          "id": 28, "type": "timeseries", "title": "Network IO - Voice Service",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 103 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } },
+          "targets": [
+            { "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"stage\", pod=~\"convogentv2-voice.*\"}[5m])) by (pod)", "legendFormat": "rx/{{pod}}" },
+            { "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"stage\", pod=~\"convogentv2-voice.*\"}[5m])) by (pod)", "legendFormat": "tx/{{pod}}" }
+          ]
+        },
+        {
+          "id": 29, "type": "timeseries", "title": "Disk IO - Voice Service",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 103 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps", "noValue": "0", "custom": { "lineWidth": 2, "spanNulls": true } } },
+          "targets": [
+            { "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"stage\", pod=~\"convogentv2-voice.*\", container=\"voice\"}[5m]) or rate(container_fs_reads_total{namespace=\"stage\", pod=~\"convogentv2-voice.*\", container=\"voice\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-voice.*\"}))", "legendFormat": "read/{{pod}}" },
+            { "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"stage\", pod=~\"convogentv2-voice.*\", container=\"voice\"}[5m]) or rate(container_fs_writes_total{namespace=\"stage\", pod=~\"convogentv2-voice.*\", container=\"voice\"}[5m]) * 512) or on(pod) (0 * group by (pod) (kube_pod_info{namespace=\"stage\", pod=~\"convogentv2-voice.*\"}))", "legendFormat": "write/{{pod}}" }
+          ]
+        }
+      ],
+      "schemaVersion": 38
+    }
