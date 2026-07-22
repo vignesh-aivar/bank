@@ -1,21 +1,14 @@
 # OpenTelemetry Collector — Bank EKS (air-gapped)
 # Collects logs from all pods + receives OTLP traces from app
 
-mode: deployment
-replicaCount: 1
+mode: daemonset
 
 image:
   repository: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/otel-collector-contrib
 
-# Run on monitoring nodes
-nodeSelector:
-  NodeGroupType: monitoring
-
+# DaemonSet runs on ALL nodes (including tainted app, voice, livekit nodes)
 tolerations:
-  - key: workload
-    operator: Equal
-    value: monitoring
-    effect: NoSchedule
+  - operator: Exists
 
 resources:
   requests:
