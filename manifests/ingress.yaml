@@ -1,18 +1,19 @@
-# Single ALB for all Convogent hostnames (AWS Load Balancer Controller + Ingress).
+# Single internal ALB for all Convogent hostnames (AWS Load Balancer Controller + Ingress).
+# Internal scheme — no IGW, traffic routed via TGW through bank's firewall VPC.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: convogent-ingress
   namespace: convogent
   annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/scheme: internal
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/group.name: convogent
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/certificate-arn: <ACM_CERTIFICATE_ARN>
     alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=600
-    external-dns.alpha.kubernetes.io/hostname: hdfcstage.convogent.ai,agent.hdfcstage.convogent.ai,chat.hdfcstage.convogent.ai,pca.hdfcstage.convogent.ai,eval.hdfcstage.convogent.ai
+    alb.ingress.kubernetes.io/subnets: <SUBNET_1>,<SUBNET_2>
 spec:
   ingressClassName: alb
   rules:
