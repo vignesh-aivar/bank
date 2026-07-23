@@ -22,7 +22,7 @@ data:
           {
             "name": "namespace",
             "type": "query",
-            "datasource": { "type": "loki", "uid": "loki" },
+            "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
             "query": "label_values(k8s_namespace_name)",
             "current": { "text": "convogent", "value": "convogent" },
             "includeAll": true,
@@ -30,10 +30,10 @@ data:
             "refresh": 2
           },
           {
-            "name": "deployment",
+            "name": "service",
             "type": "query",
-            "datasource": { "type": "loki", "uid": "loki" },
-            "query": "label_values({k8s_namespace_name=~\"$namespace\"}, k8s_deployment_name)",
+            "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+            "query": "label_values({k8s_namespace_name=~\"$namespace\"}, service_name)",
             "current": { "text": "All", "value": "$__all" },
             "includeAll": true,
             "multi": true,
@@ -53,10 +53,10 @@ data:
           "type": "logs",
           "title": "All Logs",
           "gridPos": { "h": 20, "w": 24, "x": 0, "y": 0 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
-              "expr": "{k8s_namespace_name=~\"$namespace\", k8s_deployment_name=~\"$deployment\"} |= \"$search\"",
+              "expr": "{k8s_namespace_name=~\"$namespace\", service_name=~\"$service\"} |= \"$search\"",
               "refId": "A"
             }
           ],
@@ -76,11 +76,11 @@ data:
           "type": "timeseries",
           "title": "Log Volume by Service",
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
-              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\", k8s_deployment_name=~\"$deployment\"} |= \"$search\" [1m])) by (k8s_deployment_name)",
-              "legendFormat": "{{k8s_deployment_name}}",
+              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\", service_name=~\"$service\"} |= \"$search\" [1m])) by (service_name)",
+              "legendFormat": "{{service_name}}",
               "refId": "A"
             }
           ],
@@ -96,11 +96,11 @@ data:
           "type": "timeseries",
           "title": "Error Rate by Service",
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
-              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\", k8s_deployment_name=~\"$deployment\"} |= \"error\" [1m])) by (k8s_deployment_name)",
-              "legendFormat": "{{k8s_deployment_name}}",
+              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\", service_name=~\"$service\"} |~ \"(?i)error\" [1m])) by (service_name)",
+              "legendFormat": "{{service_name}}",
               "refId": "A"
             }
           ],
@@ -117,7 +117,7 @@ data:
           "type": "stat",
           "title": "Total Log Lines (last 5m)",
           "gridPos": { "h": 4, "w": 6, "x": 0, "y": 36 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
               "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\"} [5m]))",
@@ -131,10 +131,10 @@ data:
           "type": "stat",
           "title": "Error Lines (last 5m)",
           "gridPos": { "h": 4, "w": 6, "x": 6, "y": 36 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
-              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\"} |= \"error\" [5m]))",
+              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\"} |~ \"(?i)error\" [5m]))",
               "refId": "A"
             }
           ],
@@ -146,10 +146,10 @@ data:
           "type": "stat",
           "title": "Warning Lines (last 5m)",
           "gridPos": { "h": 4, "w": 6, "x": 12, "y": 36 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
-              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\"} |= \"warn\" [5m]))",
+              "expr": "sum(count_over_time({k8s_namespace_name=~\"$namespace\"} |~ \"(?i)warn\" [5m]))",
               "refId": "A"
             }
           ],
@@ -161,10 +161,10 @@ data:
           "type": "stat",
           "title": "Active Services",
           "gridPos": { "h": 4, "w": 6, "x": 18, "y": 36 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
-              "expr": "count(count by (k8s_deployment_name) (count_over_time({k8s_namespace_name=~\"$namespace\"} [5m])))",
+              "expr": "count(count by (service_name) (count_over_time({k8s_namespace_name=~\"$namespace\"} [5m])))",
               "refId": "A"
             }
           ],
