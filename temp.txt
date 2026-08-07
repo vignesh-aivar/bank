@@ -26,7 +26,7 @@ aws secretsmanager get-secret-value --secret-id convogent/dev/voice-service --re
 
 
 
-for svc in backend eval pca voice-service; do
+for svc in backend eval pca chat voice-service; do
   K8S_NAME="convogent-${svc%-service}-secrets"
 
   SECRET_JSON=$(aws secretsmanager get-secret-value \
