@@ -1,0 +1,150 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: convogent-pod-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: convogent.pod.availability
+      interval: 30s
+      rules:
+        - alert: ConvogentPodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{
+              namespace="stage",
+              pod=~"convogentv2-.*"
+            }[15m]) > 3
+          for: 5m
+          labels:
+            severity: warning
+            team: convogent
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash-looping"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted more than 3 times in the last 15 minutes."
+
+        - alert: ConvogentPodNotReady
+          expr: |
+            kube_pod_status_ready{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              condition="true"
+            } == 0
+          for: 5m
+          labels:
+            severity: warning
+            team: convogent
+          annotations:
+            summary: "Pod {{ $labels.pod }} is not ready"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been in a not-ready state for more than 5 minutes."
+
+        - alert: ConvogentPodOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              reason="OOMKilled"
+            } == 1
+          for: 0m
+          labels:
+            severity: critical
+            team: convogent
+          annotations:
+            summary: "Pod {{ $labels.pod }} was OOMKilled"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} (namespace {{ $labels.namespace }}) was killed due to out-of-memory. Check memory limits."
+
+        - alert: ConvogentDeploymentReplicasMismatch
+          expr: |
+            kube_deployment_spec_replicas{
+              namespace="stage",
+              deployment=~"convogentv2-.*"
+            } != kube_deployment_status_replicas_ready{
+              namespace="stage",
+              deployment=~"convogentv2-.*"
+            }
+          for: 10m
+          labels:
+            severity: warning
+            team: convogent
+          annotations:
+            summary: "Deployment {{ $labels.deployment }} has unavailable replicas"
+            description: "Deployment {{ $labels.deployment }} in namespace {{ $labels.namespace }} has had mismatched desired vs ready replicas for 10 minutes."
+
+        - alert: ConvogentDeploymentUnavailable
+          expr: |
+            kube_deployment_status_replicas_available{
+              namespace="stage",
+              deployment=~"convogentv2-.*"
+            } == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: convogent
+          annotations:
+            summary: "Deployment {{ $labels.deployment }} has zero available replicas"
+            description: "Deployment {{ $labels.deployment }} in namespace {{ $labels.namespace }} has no available replicas. Service is down."
+
+    - name: convogent.pod.resources
+      interval: 60s
+      rules:
+        - alert: ConvogentHighCPUThrottle
+          expr: |
+            rate(container_cpu_cfs_throttled_seconds_total{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              container!="",
+              container!="POD"
+            }[5m]) / rate(container_cpu_cfs_periods_total{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              container!="",
+              container!="POD"
+            }[5m]) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            team: convogent
+          annotations:
+            summary: "Container {{ $labels.container }} in pod {{ $labels.pod }} is heavily CPU throttled"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has been throttled more than 50% of the time for the past 10 minutes. Consider increasing CPU limits."
+
+        - alert: ConvogentHighMemoryUsage
+          expr: |
+            container_memory_working_set_bytes{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              container!="",
+              container!="POD"
+            } / container_spec_memory_limit_bytes{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              container!="",
+              container!="POD"
+            } > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            team: convogent
+          annotations:
+            summary: "Container {{ $labels.container }} in pod {{ $labels.pod }} is using >85% memory"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} is at {{ $value | humanizePercentage }} of its memory limit. OOMKill risk."
+
+    - name: convogent.pod.pending
+      interval: 60s
+      rules:
+        - alert: ConvogentPodPendingTooLong
+          expr: |
+            kube_pod_status_phase{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              phase="Pending"
+            } == 1
+          for: 10m
+          labels:
+            severity: warning
+            team: convogent
+          annotations:
+            summary: "Pod {{ $labels.pod }} has been Pending for >10 minutes"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been Pending for more than 10 minutes. Possible Karpenter provisioning issue or resource constraint."

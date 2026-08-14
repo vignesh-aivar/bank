@@ -50,13 +50,13 @@ serviceAccount:
 
 
 nodeSelector:
-  workload: livekit-core
+  workload: livekit-egress
 
 
 tolerations:
   - key: "workload"
     operator: "Equal"
-    value: "livekit-core"
+    value: "livekit-egress"
     effect: "NoSchedule"
 
 

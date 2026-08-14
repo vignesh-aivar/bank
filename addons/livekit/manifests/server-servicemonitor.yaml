@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-server-metrics
+  namespace: livekit
+  labels:
+    app: livekit-server
+    component: metrics
+spec:
+  selector:
+    app: livekit-server
+  ports:
+    - name: metrics
+      port: 7880
+      targetPort: 7880
+  clusterIP: None
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: livekit-server
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - livekit
+  selector:
+    matchLabels:
+      app: livekit-server
+      component: metrics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

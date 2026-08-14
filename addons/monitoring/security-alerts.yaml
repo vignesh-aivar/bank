@@ -1,0 +1,102 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: convogent-security-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: convogent.security.rbac
+      interval: 60s
+      rules:
+        - alert: ConvogentPrivilegedContainerDetected
+          expr: |
+            kube_pod_container_info{
+              namespace="stage",
+              pod=~"convogentv2-.*"
+            } * on(pod, namespace) group_left() kube_pod_spec_containers_security_context_privileged{
+              namespace="stage",
+              privileged="true"
+            } > 0
+          for: 0m
+          labels:
+            severity: critical
+            team: convogent
+            category: security
+          annotations:
+            summary: "Privileged container detected in pod {{ $labels.pod }}"
+            description: "A privileged container was found in pod {{ $labels.pod }} in namespace {{ $labels.namespace }}. Privileged containers should not be used in production."
+
+        - alert: ConvogentUnexpectedNamespaceAccess
+          expr: |
+            increase(apiserver_audit_event_total{
+              objectRef_namespace="stage",
+              verb=~"create|delete|patch|update",
+              user_username!~"system:serviceaccount:stage:.*|system:serviceaccount:kube-system:.*|kubernetes-admin"
+            }[10m]) > 5
+          for: 0m
+          labels:
+            severity: warning
+            team: convogent
+            category: security
+          annotations:
+            summary: "Unexpected API access to stage namespace"
+            description: "User {{ $labels.user_username }} performed {{ $value }} mutating operations in the stage namespace in the last 10 minutes. Verify this is expected."
+
+    - name: convogent.security.network
+      interval: 60s
+      rules:
+        - alert: ConvogentHighOutboundTraffic
+          expr: |
+            sum by(pod) (
+              rate(container_network_transmit_bytes_total{
+                namespace="stage",
+                pod=~"convogentv2-.*"
+              }[5m])
+            ) > 100e6
+          for: 5m
+          labels:
+            severity: warning
+            team: convogent
+            category: security
+          annotations:
+            summary: "Pod {{ $labels.pod }} has unusually high outbound traffic"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is transmitting more than 100 MB/s. Possible data exfiltration or misconfiguration."
+
+    - name: convogent.security.secrets
+      interval: 300s
+      rules:
+        - alert: ConvogentSecretMountedInMultipleNamespaces
+          expr: |
+            count by(secret) (
+              kube_secret_info{namespace="stage"}
+            ) > 1
+          for: 0m
+          labels:
+            severity: info
+            team: convogent
+            category: security
+          annotations:
+            summary: "Secret {{ $labels.secret }} referenced in multiple places"
+            description: "Secret {{ $labels.secret }} in namespace stage appears to be referenced multiple times. Review if this is expected."
+
+    - name: convogent.security.images
+      interval: 3600s
+      rules:
+        - alert: ConvogentImageUsingLatestTag
+          expr: |
+            kube_pod_container_info{
+              namespace="stage",
+              pod=~"convogentv2-.*",
+              image_id=~".*:latest"
+            } == 1
+          for: 0m
+          labels:
+            severity: warning
+            team: convogent
+            category: security
+          annotations:
+            summary: "Container {{ $labels.container }} in pod {{ $labels.pod }} uses the latest tag"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} is using the :latest image tag. Pin to a specific digest or semantic version for reproducible deployments."

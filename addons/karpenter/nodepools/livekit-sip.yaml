@@ -1,0 +1,42 @@
+# LiveKit SIP — public subnet, public IP required for direct RTP media to PSTN peers.
+# On-demand only; SIP sessions cannot survive node replacement.
+# Pinned to ap-south-1a to keep SIP↔SFU media on a single intra-AZ hop.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: livekit-sip
+spec:
+  template:
+    metadata:
+      labels:
+        workload: livekit-sip
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: livekit-public
+      taints:
+        - key: workload
+          value: livekit-sip
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["c7g.xlarge"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["ap-south-1a"]
+
+  limits:
+    cpu: "100"
+    memory: 200Gi
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 30m

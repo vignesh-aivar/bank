@@ -1,0 +1,40 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # Karpenter node IAM role for convogent-v2-prod-aps1
+  role: convogent-v2-loadtest-karpenter-node
+
+  # Private subnets — all 3 AZs in the convogent-v2 VPC (vpc-0f780c7c9f67a8fa3)
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: convogent-v2-loadtest
+        kubernetes.io/role/internal-elb: "1"
+
+  # Cluster-shared security group
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: convogent-v2-loadtest
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 80Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+
+  metadataOptions:
+    httpEndpoint: enabled
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  tags:
+    Project: convogent-v2
+    Environment: production
+    ManagedBy: karpenter
+    karpenter.sh/discovery: convogent-v2-loadtest

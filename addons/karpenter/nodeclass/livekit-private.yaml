@@ -1,0 +1,42 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: livekit-private
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  role: convogent-v2-loadtest-karpenter-node
+
+  # Private subnets — livekit-server stays off the public internet
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: convogent-v2-loadtest
+        kubernetes.io/role/internal-elb: "1"
+
+  # Cluster SG + dedicated livekit media ports SG
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: convogent-v2-loadtest
+    - tags:
+        livekit/node-sg: "true"
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 80Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+
+  metadataOptions:
+    httpEndpoint: enabled
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  tags:
+    Project: convogent-v2
+    Environment: production
+    ManagedBy: karpenter
+    karpenter.sh/discovery: convogent-v2-loadtest
+    Component: livekit-server

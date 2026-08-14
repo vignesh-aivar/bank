@@ -1,0 +1,22 @@
+{{- if .Values.voiceService.podMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "convogent-voice-service.name" . }}
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    {{- include "convogent-voice-service.labels" . | nindent 4 }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ include "convogent-voice-service.namespace" . }}
+  selector:
+    matchLabels:
+      {{- include "convogent-voice-service.selectorLabels" . | nindent 6 }}
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.voiceService.podMonitor.interval | default "30s" }}
+      scrapeTimeout: {{ .Values.voiceService.podMonitor.scrapeTimeout | default "10s" }}
+{{- end }}

@@ -1,0 +1,44 @@
+# App workloads — frontend, backend, chat, eval, pca share this node pool.
+# Bin-packs 5 stateless services onto large/xlarge instances for cost efficiency.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: app-workloads
+spec:
+  template:
+    metadata:
+      labels:
+        NodeGroupType: app
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      taints:
+        - key: workload
+          value: app
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["c6a", "c6i", "m6a", "m6i"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["large", "xlarge", "2xlarge"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+      expireAfter: 720h
+
+  limits:
+    cpu: 96
+    memory: 192Gi
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 30s
+
+  weight: 20

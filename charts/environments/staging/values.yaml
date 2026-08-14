@@ -11,7 +11,7 @@ global:
   serviceAccount:
     create: true
     annotations: {}
-  imageRegistry: 368886161280.dkr.ecr.us-east-1.amazonaws.com
+  imageRegistry: public.ecr.aws/q7j2m2s0
   host: hdfcstage.convogent.ai
   agentHost: agent.hdfcstage.convogent.ai
   # Edge routing: argocd-apps/platform/addons/ingress/convogent-stage.yaml (ALB Ingress)
@@ -20,7 +20,7 @@ frontend:
   name: convogentv2-frontend-stage
   replicaCount: 0
   image:
-    repository: convogentv2-frontend-stage
+    repository: convogent-frontend
     tag: "9acd37f790955212f2301aeeb82a8a2416a4d252"
     pullPolicy: Always
   service:
@@ -76,7 +76,7 @@ backend:
   name: convogentv2-backend-stage
   replicaCount: 0
   image:
-    repository: convogentv2-backend-stage
+    repository: convogent-backend
     tag: "3552582ba6933c9b1e933a394f232d7845decbb3"
     pullPolicy: Always
   service:
@@ -202,7 +202,7 @@ chatService:
   name: convogentv2-chat-stage
   replicaCount: 0
   image:
-    repository: convogentv2-chat-stage
+    repository: convogent-chat-service
     tag: "42d212a58539ef0b1ba03094efc8c80b3decf443"
     pullPolicy: Always
   service:
@@ -279,7 +279,7 @@ evalService:
   name: convogentv2-eval-stage
   replicaCount: 0
   image:
-    repository: convogentv2-eval-stage
+    repository: convogent-eval-service
     tag: "80fee80524cb195ca1503fe4b37802bcc2919e85"
     pullPolicy: Always
   service:
@@ -362,7 +362,7 @@ pcaService:
   name: convogentv2-pca-stage
   replicaCount: 0
   image:
-    repository: convogentv2-pca-stage
+    repository: convogent-pca-service
     tag: "3da539812ba0e112b6e82a91e5b97e851535b042"
     pullPolicy: Always
   service:
@@ -443,7 +443,7 @@ voiceService:
   name: convogentv2-voice-stage
   replicaCount: 0
   image:
-    repository: convogentv2-voice-stage
+    repository: convogent-voice-service
     tag: "42d212a58539ef0b1ba03094efc8c80b3decf443"
     pullPolicy: Always
   service:

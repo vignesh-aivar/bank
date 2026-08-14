@@ -83,13 +83,13 @@ podHostNetwork: false
 
 
 nodeSelector:
-  workload: livekit-core
+  workload: livekit-server
 
 
 tolerations:
   - key: "workload"
     operator: "Equal"
-    value: "livekit-core"
+    value: "livekit-server"
     effect: "NoSchedule"
 
 

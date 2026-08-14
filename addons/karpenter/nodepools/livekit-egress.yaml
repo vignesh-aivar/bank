@@ -1,0 +1,41 @@
+# LiveKit egress — recording/streaming pipeline. Spot tolerated; egress fails gracefully
+# on interruption and KEDA respawns. Pinned to ap-south-1a for intra-AZ media with SFU.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: livekit-egress
+spec:
+  template:
+    metadata:
+      labels:
+        workload: livekit-egress
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: livekit-egress
+      taints:
+        - key: workload
+          value: livekit-egress
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["c7g.xlarge", "c7g.2xlarge"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["ap-south-1a"]
+
+  limits:
+    cpu: "100"
+    memory: 200Gi
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m

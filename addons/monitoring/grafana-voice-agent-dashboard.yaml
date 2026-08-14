@@ -1,0 +1,471 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-voice-agent-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Convogent"
+data:
+  voice-agent-dashboard.json: |
+    {
+      "uid": "convogent-voice-agent",
+      "title": "Convogent Voice Agent",
+      "description": "Pipecat voice agent — live call capacity, throughput, duration, and KEDA scaling",
+      "tags": ["voice", "agent", "keda", "pipecat"],
+      "timezone": "browser",
+      "refresh": "15s",
+      "schemaVersion": 38,
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "type": "constant",
+            "value": "stage",
+            "hide": 2
+          },
+          {
+            "name": "pod",
+            "type": "query",
+            "label": "Pod",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": "label_values(agent_active_calls{namespace=\"$namespace\"}, pod)",
+            "refresh": 2,
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": true
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "row",
+          "title": "Live Capacity",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+          "collapsed": false
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Active Calls (total)",
+          "description": "Total live pipecat pipelines across all agent pods right now",
+          "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value_and_name",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 4 },
+                  { "color": "red", "value": 8 }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(agent_active_calls{namespace=\"$namespace\"})",
+              "legendFormat": "Active Calls"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Free Slots (total)",
+          "description": "Total spare call capacity across all agent pods",
+          "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "yellow", "value": 2 },
+                  { "color": "green", "value": 4 }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(agent_slots_free{namespace=\"$namespace\"})",
+              "legendFormat": "Free Slots"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "gauge",
+          "title": "Capacity Utilization %",
+          "description": "% of total call slots in use across all pods",
+          "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"] },
+            "minVizWidth": 75,
+            "minVizHeight": 75
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "max": 100,
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 70 },
+                  { "color": "red", "value": 90 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(agent_active_calls{namespace=\"$namespace\"}) / (count(agent_active_calls{namespace=\"$namespace\"}) * 2) * 100",
+              "legendFormat": "Utilization %"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Running Pods",
+          "description": "Current number of agent pod replicas",
+          "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{ "color": "blue", "value": null }]
+              }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_deployment_spec_replicas{deployment=\"convogentv2-voice-stage\",namespace=\"$namespace\"}",
+              "legendFormat": "Replicas"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Active Calls per Pod",
+          "description": "Per-pod active call count — shows load distribution across replicas",
+          "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "tooltip": { "mode": "multi" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "custom": { "fillOpacity": 10, "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "agent_active_calls{namespace=\"$namespace\",pod=~\"$pod\"}",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "type": "timeseries",
+          "title": "Pod Replica Count (KEDA scaling)",
+          "description": "Agent deployment replica count over time — shows KEDA scaling events",
+          "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "tooltip": { "mode": "single" },
+            "legend": { "displayMode": "list", "placement": "bottom" }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0,
+              "custom": { "fillOpacity": 20, "lineWidth": 2, "drawStyle": "line", "stacking": { "mode": "none" } },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_deployment_spec_replicas{deployment=\"convogentv2-voice-stage\",namespace=\"$namespace\"}",
+              "legendFormat": "Desired Replicas"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "kube_deployment_status_replicas_ready{deployment=\"convogentv2-voice-stage\",namespace=\"$namespace\"}",
+              "legendFormat": "Ready Replicas"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "type": "row",
+          "title": "Throughput & Errors",
+          "gridPos": { "x": 0, "y": 13, "w": 24, "h": 1 },
+          "collapsed": false
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "Calls per Minute",
+          "description": "Rate of calls started and completed — throughput trend",
+          "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "tooltip": { "mode": "multi" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cpm",
+              "min": 0,
+              "custom": { "fillOpacity": 10, "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(agent_calls_started_total{namespace=\"$namespace\"}[5m])) * 60",
+              "legendFormat": "Started / min"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(agent_calls_completed_total{namespace=\"$namespace\"}[5m])) * 60",
+              "legendFormat": "Completed / min"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "timeseries",
+          "title": "Failure Rate by Reason",
+          "description": "Failed/dropped calls broken down by reason — timeout, error, dropped, rejected",
+          "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "tooltip": { "mode": "multi" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cpm",
+              "min": 0,
+              "custom": { "fillOpacity": 10, "lineWidth": 2 },
+              "color": { "mode": "palette-classic" }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by(reason)(rate(agent_calls_failed_total{namespace=\"$namespace\"}[5m])) * 60",
+              "legendFormat": "{{reason}}"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "type": "row",
+          "title": "Call Duration",
+          "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 },
+          "collapsed": false
+        },
+        {
+          "id": 12,
+          "type": "timeseries",
+          "title": "Call Duration Percentiles",
+          "description": "p50 / p95 / p99 call duration — useful for validating terminationGracePeriodSeconds",
+          "gridPos": { "x": 0, "y": 23, "w": 16, "h": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "tooltip": { "mode": "multi" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0,
+              "custom": { "fillOpacity": 5, "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum(rate(agent_call_duration_seconds_bucket{namespace=\"$namespace\"}[10m])) by (le))",
+              "legendFormat": "p50 (median)"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.95, sum(rate(agent_call_duration_seconds_bucket{namespace=\"$namespace\"}[10m])) by (le))",
+              "legendFormat": "p95"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(agent_call_duration_seconds_bucket{namespace=\"$namespace\"}[10m])) by (le))",
+              "legendFormat": "p99"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "stat",
+          "title": "Avg Call Duration",
+          "description": "Average call duration over the selected time range",
+          "gridPos": { "x": 16, "y": 23, "w": 4, "h": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "reduceOptions": { "calcs": ["mean"] },
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": { "unit": "s" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(agent_call_duration_seconds_sum{namespace=\"$namespace\"}[10m])) / sum(rate(agent_call_duration_seconds_count{namespace=\"$namespace\"}[10m]))",
+              "legendFormat": "Avg Duration"
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "type": "stat",
+          "title": "Max Call Duration",
+          "description": "Longest call duration observed — compare against terminationGracePeriodSeconds (360s)",
+          "gridPos": { "x": 20, "y": 23, "w": 4, "h": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "reduceOptions": { "calcs": ["max"] },
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 240 },
+                  { "color": "red", "value": 300 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(agent_call_duration_seconds_bucket{namespace=\"$namespace\"}[1h])) by (le))",
+              "legendFormat": "p99 Duration"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "row",
+          "title": "Infrastructure",
+          "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 },
+          "collapsed": false
+        },
+        {
+          "id": 16,
+          "type": "timeseries",
+          "title": "CPU Usage per Pod",
+          "description": "Actual CPU usage — validate request sizing is correct",
+          "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "tooltip": { "mode": "multi" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores",
+              "min": 0,
+              "custom": { "fillOpacity": 10, "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by(pod)(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",pod=~\"convogentv2-voice-stage-.*\",container!=\"\",container!=\"POD\"}[2m]))",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "type": "timeseries",
+          "title": "Memory Usage per Pod",
+          "description": "Resident memory usage — validate memory limit is sufficient under load",
+          "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "options": {
+            "tooltip": { "mode": "multi" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "custom": { "fillOpacity": 10, "lineWidth": 2 },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 3221225472 },
+                  { "color": "red", "value": 3758096384 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by(pod)(container_memory_working_set_bytes{namespace=\"$namespace\",pod=~\"convogentv2-voice-stage-.*\",container!=\"\",container!=\"POD\"})",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        }
+      ]
+    }

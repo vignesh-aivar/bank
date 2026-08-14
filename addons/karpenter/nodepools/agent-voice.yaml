@@ -1,0 +1,45 @@
+# Voice agent — live call handling. Network-optimized instances preferred;
+# c6a/c6i fallback. Long-lived pods so scaledown stabilization is aggressive.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: agent-voice
+spec:
+  template:
+    metadata:
+      labels:
+        NodeGroupType: agent-voice
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      taints:
+        - key: workload
+          value: agent-voice
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["c6a", "c6i", "m6a", "m6i"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["xlarge", "2xlarge"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+      expireAfter: 720h
+
+  limits:
+    cpu: 128
+    memory: 256Gi
+
+  disruption:
+    # Longer cooldown — voice calls are long-lived, avoid evicting mid-call
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
+
+  weight: 10
