@@ -6,7 +6,7 @@ spec:
   amiSelectorTerms:
     - alias: al2023@latest
 
-  role: convogent-v2-loadtest-karpenter-node
+  role: convogent-bank-karpenter-node
 
   # Private subnets — livekit-server stays off the public internet
   subnetSelectorTerms:

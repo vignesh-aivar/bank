@@ -6,7 +6,7 @@ spec:
   amiSelectorTerms:
     - alias: al2023@latest
 
-  role: convogent-v2-loadtest-karpenter-node
+  role: convogent-bank-karpenter-node
 
   # Public subnets — SIP pods need a public IP for direct RTP media to PSTN peers.
   # Discovered via the dedicated karpenter.sh/discovery/sip tag set on all 3

@@ -6,7 +6,7 @@ spec:
   amiSelectorTerms:
     - alias: al2023@latest
 
-  role: convogent-v2-loadtest-karpenter-node
+  role: convogent-bank-karpenter-node
 
   # Private subnets — egress doesn't need a public IP (no inbound PSTN media)
   subnetSelectorTerms:
