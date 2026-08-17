@@ -9,7 +9,7 @@ global:
   environment: stage
   serviceAccountName: convogentv2-stage-sa
   serviceAccount:
-    create: true
+    create: false
     annotations: {}
   imageRegistry: public.ecr.aws/q7j2m2s0
   host: hdfcstage.convogent.ai
@@ -18,6 +18,9 @@ global:
 frontend:
   enabled: true
   name: convogentv2-frontend-stage
+  serviceAccount:
+    create: false
+    annotations: {}
   replicaCount: 0
   image:
     repository: convogent-frontend
@@ -48,11 +51,11 @@ frontend:
     timeoutSeconds: 3
     failureThreshold: 3
   nodeSelector:
-    NodeGroupType: app
+    NodeGroupType: dev-workloads
   tolerations:
     - key: workload
       operator: Equal
-      value: app
+      value: dev-workloads
       effect: NoSchedule
   # KEDA event-driven autoscaling — CPU + memory (stateless web tier)
   keda:
@@ -74,6 +77,9 @@ frontend:
 backend:
   enabled: true
   name: convogentv2-backend-stage
+  serviceAccount:
+    create: true
+    annotations: {}
   replicaCount: 0
   image:
     repository: convogent-backend
@@ -115,11 +121,11 @@ backend:
     timeoutSeconds: 3
     failureThreshold: 3
   nodeSelector:
-    NodeGroupType: app
+    NodeGroupType: dev-workloads
   tolerations:
     - key: workload
       operator: Equal
-      value: app
+      value: dev-workloads
       effect: NoSchedule
   envFromSecret: "convogentv2-backend-secrets-stage"
   createSecret: false
@@ -200,6 +206,9 @@ backend:
 chatService:
   enabled: true
   name: convogentv2-chat-stage
+  serviceAccount:
+    create: false
+    annotations: {}
   replicaCount: 0
   image:
     repository: convogent-chat-service
@@ -230,11 +239,11 @@ chatService:
     timeoutSeconds: 3
     failureThreshold: 5
   nodeSelector:
-    NodeGroupType: app
+    NodeGroupType: dev-workloads
   tolerations:
     - key: workload
       operator: Equal
-      value: app
+      value: dev-workloads
       effect: NoSchedule
   envFromSecret: "convogentv2-chat-secrets-stage"
   externalSecret:
@@ -277,6 +286,9 @@ chatService:
 evalService:
   enabled: true
   name: convogentv2-eval-stage
+  serviceAccount:
+    create: false
+    annotations: {}
   replicaCount: 0
   image:
     repository: convogent-eval-service
@@ -307,11 +319,11 @@ evalService:
     timeoutSeconds: 3
     failureThreshold: 5
   nodeSelector:
-    NodeGroupType: app
+    NodeGroupType: dev-workloads
   tolerations:
     - key: workload
       operator: Equal
-      value: app
+      value: dev-workloads
       effect: NoSchedule
   envFromSecret: "convogentv2-eval-secrets-stage"
   externalSecret:
@@ -360,6 +372,9 @@ evalService:
 pcaService:
   enabled: true
   name: convogentv2-pca-stage
+  serviceAccount:
+    create: false
+    annotations: {}
   replicaCount: 0
   image:
     repository: convogent-pca-service
@@ -390,11 +405,11 @@ pcaService:
     timeoutSeconds: 3
     failureThreshold: 5
   nodeSelector:
-    NodeGroupType: app
+    NodeGroupType: dev-workloads
   tolerations:
     - key: workload
       operator: Equal
-      value: app
+      value: dev-workloads
       effect: NoSchedule
   envFromSecret: "convogentv2-pca-secrets-stage"
   externalSecret:
@@ -441,6 +456,11 @@ pcaService:
 voiceService:
   enabled: true
   name: convogentv2-voice-stage
+  serviceAccount:
+    create: false
+    annotations: {}
+  podMonitor:
+    enabled: false
   replicaCount: 0
   image:
     repository: convogent-voice-service
