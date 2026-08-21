@@ -253,15 +253,130 @@
 
 ---
 
-## Summary of Node Count (Expected at Steady State)
+## Pod Counts per Service
 
-| NodePool | Expected Nodes | Reason |
-|----------|---------------|--------|
-| core (managed) | 1 | Fixed, always running |
-| agent-voice | 1-5 | Scales with call volume |
-| dev-workloads | 1-3 | 5 services bin-packed |
-| monitoring | 1-2 | PVCs keep pods sticky |
-| livekit-server | 1-3 | Scales with rooms |
-| livekit-sip | 1 | Low traffic, single node |
-| livekit-egress | 1-5 | Scales with recordings |
-| **TOTAL** | **7-20** | |
+### Application Services (KEDA-managed)
+
+| Service | NodePool | Min Replicas | Max Replicas | Steady-State Pods | Resources per Pod |
+|---------|----------|--------------|--------------|-------------------|-------------------|
+| **convogent-voice-service** | agent-voice | 1 | 20 | 2-5 | 2 CPU / 2.5Gi req → 4 CPU / 4Gi lim |
+| **convogent-backend** | dev-workloads | 1 | 6 | 1-2 | 100m CPU / 512Mi req → 500m / 1Gi lim |
+| **convogent-frontend** | dev-workloads | 1 | 3 | 1 | 50m CPU / 64Mi req → 200m / 128Mi lim |
+| **convogent-chat-service** | dev-workloads | 1 | 5 | 1-2 | 200m CPU / 384Mi req → 500m / 768Mi lim |
+| **convogent-eval-service** | dev-workloads | 1 | 5 | 1-2 | 150m CPU / 192Mi req → 500m / 512Mi lim |
+| **convogent-pca-service** | dev-workloads | 1 | 5 | 1-2 | 150m CPU / 192Mi req → 500m / 512Mi lim |
+
+### LiveKit Services (HPA-managed)
+
+| Service | NodePool | Min Replicas | Max Replicas | Steady-State Pods | Resources per Pod |
+|---------|----------|--------------|--------------|-------------------|-------------------|
+| **livekit-server** | livekit-server | 3 | 10 | 3 | 1.5 CPU / 2Gi req → 2 CPU / 2Gi lim |
+| **livekit-sip** | livekit-sip | 1 (manual) | — | 1 | 1 CPU / 1Gi req → 2 CPU / 2Gi lim |
+| **livekit-egress** | livekit-egress | 5 | 30 | 5 | 3.5 CPU / 4Gi req → 4 CPU / 4Gi lim |
+
+### Monitoring Services (Fixed replicas)
+
+| Service | NodePool | Replicas | Resources per Pod |
+|---------|----------|----------|-------------------|
+| **Prometheus** | monitoring | 1 | 500m CPU / 2Gi req → 2 CPU / 4Gi lim |
+| **Grafana** | monitoring | 1 | 100m CPU / 256Mi req → 500m / 512Mi lim |
+| **Alertmanager** | monitoring | 1 | 50m CPU / 128Mi req → 200m / 256Mi lim |
+| **Loki** | monitoring | 1 | 200m CPU / 512Mi req → 1 CPU / 2Gi lim |
+| **Loki Gateway** | monitoring | 1 | 50m CPU / 64Mi req → 200m / 128Mi lim |
+| **Tempo Distributor** | monitoring | 1 | 50m CPU / 128Mi req → 500m / 512Mi lim |
+| **Tempo Ingester** | monitoring | 1 | 100m CPU / 512Mi req → 500m / 1Gi lim |
+| **Tempo Querier** | monitoring | 1 | 50m CPU / 128Mi req → 500m / 512Mi lim |
+| **Tempo Query Frontend** | monitoring | 1 | 50m CPU / 128Mi req → 500m / 512Mi lim |
+| **Tempo Compactor** | monitoring | 1 | — |
+| **kube-state-metrics** | monitoring | 1 | 50m CPU / 128Mi req → 200m / 256Mi lim |
+| **prometheus-adapter** | monitoring | 1 | 50m CPU / 256Mi req → 200m / 512Mi lim |
+| **prometheus-operator** | monitoring | 1 | 100m CPU / 256Mi req → 500m / 512Mi lim |
+
+### DaemonSets (run on ALL nodes)
+
+| Service | NodePool | Pods = Nodes | Resources per Pod |
+|---------|----------|--------------|-------------------|
+| **otel-collector** | ALL | 1 per node | 100m CPU / 256Mi req → 500m / 512Mi lim |
+| **node-exporter** | ALL | 1 per node | — |
+
+### Cluster Infrastructure (core managed node group)
+
+| Service | NodePool | Replicas | Resources per Pod |
+|---------|----------|----------|-------------------|
+| **Karpenter** | core | 1 | 100m CPU / 256Mi req → 1 CPU / 1Gi lim |
+| **KEDA operator** | core | 1 | 50m CPU / 128Mi req → 500m / 512Mi lim |
+| **KEDA metrics-apiserver** | core | 1 | 50m CPU / 64Mi req → 250m / 256Mi lim |
+| **KEDA admission-webhooks** | core | 1 | — |
+| **CoreDNS** | core | 2 | EKS default |
+
+---
+
+## Node Count Calculation
+
+### Steady-State (normal load)
+
+| NodePool | Instance Type | Pods on Pool | CPU Needed | Nodes Needed | Calculation |
+|----------|--------------|--------------|------------|--------------|-------------|
+| **core** (managed) | t3.medium (2 vCPU) | Karpenter + KEDA + CoreDNS | ~0.5 CPU | **1 node** | EKS managed, fixed |
+| **agent-voice** | c6in.xlarge (4 vCPU) | 2-5 voice pods @ 2 CPU each | 4-10 CPU | **1-3 nodes** | 2 pods/node max |
+| **dev-workloads** | c6a.xlarge (4 vCPU) | 5-8 pods @ 0.1-0.5 CPU each | ~1.5 CPU total | **1 node** | All 5 services fit on 1 node |
+| **monitoring** | t4g.large (2 vCPU) | 13 pods @ varied | ~1.5 CPU total | **1 node** | All monitoring fits on 1 t4g.large |
+| **livekit-server** | c7g.2xlarge (8 vCPU) | 3 pods @ 1.5 CPU each | 4.5 CPU | **1 node** | 3 pods fit on 1 c7g.2xlarge |
+| **livekit-sip** | c7g.xlarge (4 vCPU) | 1 pod @ 1 CPU | 1 CPU | **1 node** | 1 pod = 1 node |
+| **livekit-egress** | c7g.2xlarge (8 vCPU) | 5 pods @ 3.5 CPU each | 17.5 CPU | **3 nodes** | ~2 pods/node |
+
+### Steady-State Total: **9 nodes**
+
+| Type | Count |
+|------|-------|
+| Managed (core) | 1 |
+| Karpenter (auto) | 8 |
+| **Total** | **9** |
+
+### Peak Load (max scaling)
+
+| NodePool | Max Pods | CPU at Max | Nodes at Max |
+|----------|----------|-----------|--------------|
+| core | Fixed | Fixed | **1** |
+| agent-voice | 20 @ 2 CPU | 40 CPU | **10 nodes** (4 vCPU each) |
+| dev-workloads | ~25 pods | ~10 CPU | **3 nodes** |
+| monitoring | Fixed | Fixed | **1-2 nodes** |
+| livekit-server | 10 @ 1.5 CPU | 15 CPU | **2 nodes** |
+| livekit-sip | 1 | 1 CPU | **1 node** |
+| livekit-egress | 30 @ 3.5 CPU | 105 CPU → limited to 100 CPU | **13 nodes** |
+
+### Peak Total: **~31 nodes max**
+
+---
+
+## Isolation Guarantee
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ convogent-voice-service NEVER shares a node with other services │
+│ because agent-voice nodepool taint BLOCKS all other pods.       │
+│                                                                  │
+│ Only voice-service has toleration for workload=agent-voice.     │
+│ This is HARD ISOLATION via NoSchedule taint.                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Independence from Reference Repo (aivar-convogent-load-test)
+
+**This cluster is 100% independent.** We only align the CONFIGURATION PATTERN:
+
+| Aspect | Our Cluster (bank) | Reference Cluster (loadtest) |
+|--------|-------------------|------------------------------|
+| AWS Account | 880335327306 | 646731024209 |
+| Region | ap-south-1 | ap-south-1 |
+| VPC | vpc-0f780c7c9f67a8fa3 | Different VPC |
+| EKS Cluster | Own cluster | convogent-v2-loadtest |
+| IAM Role | convogent-bank-karpenter-node | convogent-v2-loadtest-karpenter-node |
+| Subnet Tags | `karpenter.sh/discovery: convogent-v2-loadtest` | Same tag pattern, different VPC |
+| Images | ECR `273354645607` (ap-south-1) | ECR `646731024209` |
+| KEDA Images | Public ECR `u7h9i3k7` | Standard ghcr.io |
+| DNS | hdfcstage.convogent.ai | Different domain |
+
+**No network connectivity, no shared resources, no IAM cross-account trust.** Pure config alignment only.
