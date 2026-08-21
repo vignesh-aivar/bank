@@ -380,3 +380,76 @@
 | DNS | hdfcstage.convogent.ai | Different domain |
 
 **No network connectivity, no shared resources, no IAM cross-account trust.** Pure config alignment only.
+
+---
+
+## Verification Status
+
+### ✅ Verified (from our side — offline validation)
+
+| Check | Status | How Verified |
+|-------|--------|--------------|
+| YAML syntax — all nodepools, nodeclasses, values files | ✅ PASS | Parsed and validated structure |
+| Taint/toleration alignment — all 6 app services match their nodepool taint | ✅ PASS | Cross-checked staging/values.yaml tolerations vs nodepool taint values |
+| nodeSelector/label match — deployments select correct nodepool labels | ✅ PASS | Compared nodeSelector in values.yaml with nodepool template labels |
+| NodeClass references — every nodepool references an existing EC2NodeClass | ✅ PASS | agent-voice→default, dev-workloads→default, monitoring→default, livekit-server→livekit-private, livekit-sip→livekit-public, livekit-egress→livekit-egress |
+| KEDA custom-values.yaml — valid Helm override structure | ✅ PASS | Matches KEDA chart values.yaml schema |
+| KEDA images accessible — pushed to public ECR | ✅ PASS | `docker push` succeeded, repos are public |
+| Config pattern matches reference repo (feat/loadtest) | ✅ PASS | Side-by-side comparison of all 6 nodepools, 4 nodeclasses |
+| No cross-cluster references — all configs self-contained | ✅ PASS | No references to account 646731024209 or convogent-v2-loadtest cluster endpoint |
+| Disruption policies aligned | ✅ PASS | livekit-egress=WhenEmpty, others=WhenEmptyOrUnderutilized |
+| Instance types exist in ap-south-1 | ✅ PASS | c6in, c5n, c7g, t4g, m7g all available in ap-south-1 |
+
+### ⚠️ Needs Verification (on the actual EKS cluster — cannot test offline)
+
+| Check | What to Verify | Command |
+|-------|---------------|---------|
+| EKS managed node group has `NodeGroupType: core` label | Core node must have this label for KEDA/Karpenter scheduling | `kubectl get nodes -l NodeGroupType=core` |
+| Subnet tags exist in VPC | `karpenter.sh/discovery: convogent-v2-loadtest` and `kubernetes.io/role/internal-elb: "1"` | Check VPC subnet tags in AWS Console |
+| SIP public subnet tag | `karpenter.sh/discovery/sip: convogent-v2-loadtest` on public subnets | Check VPC subnet tags in AWS Console |
+| Security group tags | `karpenter.sh/discovery: convogent-v2-loadtest` and `livekit/node-sg: "true"` | Check SG tags in AWS Console |
+| IAM role exists | `convogent-bank-karpenter-node` role must exist for Karpenter nodes | `aws iam get-role --role-name convogent-bank-karpenter-node` |
+| Karpenter controller running | Karpenter must be installed and running before applying nodepools | `kubectl get pods -n karpenter` |
+| KEDA install works | Helm install with custom-values.yaml pulls images from public ECR | `helm install keda ./addons/keda -f ./addons/keda/custom-values.yaml -n keda --create-namespace` |
+| KEDA pods running | All 3 KEDA pods should be Running | `kubectl get pods -n keda` |
+| NodePool applied | Apply all nodepool YAMLs and verify Karpenter accepts them | `kubectl apply -f addons/karpenter/nodepools/` |
+| NodeClass applied | Apply all nodeclass YAMLs | `kubectl apply -f addons/karpenter/nodeclass/ && kubectl apply -f addons/karpenter/ec2nodeclass.yaml` |
+| Node provisioning | Deploy a test pod with correct toleration, verify Karpenter provisions a node | `kubectl get nodeclaims` |
+| gp3 StorageClass exists | Monitoring PVCs need `gp3` StorageClass | `kubectl get sc gp3` |
+| LiveKit images accessible | ECR `273354645607.dkr.ecr.ap-south-1.amazonaws.com` reachable from EKS nodes | Deploy livekit-server and check pod status |
+| Service images accessible | ECR `public.ecr.aws/q7j2m2s0` reachable for app service images | Deploy any service and check ImagePullBackOff |
+
+### 🔁 Post-Deployment Validation Checklist
+
+```bash
+# 1. Verify KEDA
+kubectl get pods -n keda
+# Expected: 3 pods Running (operator, metrics-apiserver, admission-webhooks)
+
+# 2. Verify Karpenter sees our nodepools
+kubectl get nodepools
+# Expected: 6 nodepools (agent-voice, dev-workloads, monitoring, livekit-server, livekit-sip, livekit-egress)
+
+# 3. Verify nodeclasses
+kubectl get ec2nodeclasses
+# Expected: 4 classes (default, livekit-private, livekit-public, livekit-egress)
+
+# 4. Deploy one service and check node provisioning
+kubectl scale deployment convogentv2-frontend-stage --replicas=1 -n stage
+# Wait 30-60s, then:
+kubectl get nodes -l NodeGroupType=dev-workloads
+# Expected: 1 new node provisioned by Karpenter
+
+# 5. Verify voice-service isolation
+kubectl scale deployment convogentv2-voice-stage --replicas=1 -n stage
+kubectl get nodes -l NodeGroupType=agent-voice
+# Expected: Separate node from dev-workloads
+
+# 6. Verify monitoring nodepool
+kubectl get nodes -l NodeGroupType=monitoring
+# Expected: 1 node in ap-south-1b after monitoring stack deployed
+
+# 7. Check no pods in Pending state
+kubectl get pods --all-namespaces --field-selector=status.phase=Pending
+# Expected: No pending pods (if pending, check nodepool limits/taints)
+```
