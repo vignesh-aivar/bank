@@ -1,0 +1,17 @@
+# Custom values for KEDA - Using public ECR images
+# Usage: helm install keda ./addons/keda -f ./addons/keda/custom-values.yaml -n keda --create-namespace
+
+image:
+  keda:
+    registry: public.ecr.aws/u7h9i3k7
+    repository: keda/keda
+    tag: "2.20.2"
+  metricsApiServer:
+    registry: public.ecr.aws/u7h9i3k7
+    repository: keda/keda-metrics-apiserver
+    tag: "2.20.2"
+  webhooks:
+    registry: public.ecr.aws/u7h9i3k7
+    repository: keda/keda-admission-webhooks
+    tag: "2.20.2"
+  pullPolicy: Always
