@@ -1,14 +1,14 @@
-# App workloads — frontend, backend, chat, eval, pca share this node pool.
-# Bin-packs 5 stateless services onto large/xlarge instances for cost efficiency.
+# Dev-stage observability — single AZ so all gp3 PVCs share one zone (cost + scheduling).
+# Metrics (Prometheus), logs (Loki), traces (Tempo) pin here via nodeSelector + tolerations.
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: app-workloads
+  name: monitoring
 spec:
   template:
     metadata:
       labels:
-        NodeGroupType: app
+        NodeGroupType: monitoring
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
@@ -16,29 +16,32 @@ spec:
         name: default
       taints:
         - key: workload
-          value: app
+          value: monitoring
           effect: NoSchedule
       requirements:
         - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["c6a", "c6i", "m6a", "m6i"]
+          values: ["t4g", "m7g"]
         - key: karpenter.k8s.aws/instance-size
           operator: In
-          values: ["large", "xlarge", "2xlarge"]
+          values: ["large"]
         - key: kubernetes.io/arch
           operator: In
-          values: ["amd64"]
+          values: ["arm64"]
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["spot", "on-demand"]
+          values: ["on-demand"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["ap-south-1b"]
       expireAfter: 720h
 
   limits:
-    cpu: 96
-    memory: 192Gi
+    cpu: 8
+    memory: 16Gi
 
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
-    consolidateAfter: 30s
+    consolidateAfter: 5m
 
-  weight: 20
+  weight: 10

@@ -1,14 +1,14 @@
-# Voice agent — live call handling. Network-optimized instances (c6in/c5n) preferred;
-# c6a/c6i fallback. Long-lived pods so scaledown stabilization is aggressive.
+# Dev-stage app workloads — frontend, backend, chat, eval, pca share this node pool.
+# Bin-packs 5 stateless services onto large/xlarge instances for cost efficiency.
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: agent-voice
+  name: dev-workloads
 spec:
   template:
     metadata:
       labels:
-        NodeGroupType: agent-voice
+        NodeGroupType: dev-workloads
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
@@ -16,15 +16,15 @@ spec:
         name: default
       taints:
         - key: workload
-          value: agent-voice
+          value: dev-workloads
           effect: NoSchedule
       requirements:
         - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["c6in", "c5n", "c6a", "c6i"]
+          values: ["c6in", "c5n", "m6in", "c6a", "c6i", "m6a", "m6i"]
         - key: karpenter.k8s.aws/instance-size
           operator: In
-          values: ["xlarge"]
+          values: ["large", "xlarge", "2xlarge"]
         - key: kubernetes.io/arch
           operator: In
           values: ["amd64"]
@@ -34,12 +34,11 @@ spec:
       expireAfter: 720h
 
   limits:
-    cpu: 128
-    memory: 256Gi
+    cpu: 96
+    memory: 192Gi
 
   disruption:
-    # Longer cooldown — voice calls are long-lived, avoid evicting mid-call
     consolidationPolicy: WhenEmptyOrUnderutilized
-    consolidateAfter: 1m
+    consolidateAfter: 30s
 
-  weight: 10
+  weight: 20

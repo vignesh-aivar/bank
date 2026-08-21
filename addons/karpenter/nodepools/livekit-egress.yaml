@@ -1,5 +1,7 @@
-# LiveKit egress — recording/streaming pipeline. Spot tolerated; egress fails gracefully
-# on interruption and KEDA respawns. Pinned to ap-south-1a for intra-AZ media with SFU.
+# LiveKit egress — recording/streaming pipeline. On-demand only because recording
+# jobs are lost on spot interruption and cannot be resumed. Pinned to ap-south-1a
+# for intra-AZ media with SFU. WhenEmpty consolidation policy ensures nodes are
+# never consolidated while recordings are in flight (only removed when fully drained).
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
@@ -21,10 +23,10 @@ spec:
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["spot", "on-demand"]
+          values: ["on-demand"]
         - key: node.kubernetes.io/instance-type
           operator: In
-          values: ["c7g.xlarge", "c7g.2xlarge"]
+          values: ["c7g.2xlarge"]
         - key: kubernetes.io/arch
           operator: In
           values: ["arm64"]
@@ -37,5 +39,5 @@ spec:
     memory: 200Gi
 
   disruption:
-    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidationPolicy: WhenEmpty
     consolidateAfter: 5m

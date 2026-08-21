@@ -15,3 +15,9 @@ image:
     repository: keda/keda-admission-webhooks
     tag: "2.20.2"
   pullPolicy: Always
+
+# Pin KEDA to the core managed node group
+nodeSelector:
+  NodeGroupType: core
+
+tolerations: []
