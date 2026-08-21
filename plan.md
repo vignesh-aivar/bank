@@ -122,33 +122,20 @@
 
 ## Key Differences from Reference Repo (aivar-convogent-load-test feat/loadtest)
 
-| Config | Reference Repo | Our Repo (Current) | Action Needed |
-|--------|---------------|-------------------|---------------|
-| NodePool name for shared services | `dev-workloads` | `app-workloads` | ⚠️ RENAME to `dev-workloads` |
-| Taint value for shared services | `dev-workloads` | `app` | ⚠️ CHANGE to `dev-workloads` |
-| Label for shared services | `NodeGroupType: dev-workloads` | `NodeGroupType: app` | ⚠️ CHANGE to `dev-workloads` |
-| Monitoring nodepool | ✅ Present | ❌ MISSING | ⚠️ ADD monitoring nodepool |
-| agent-voice instance family | c6in, c5n, c6a, c6i | c6a, c6i, m6a, m6i | ⚠️ ALIGN to c6in, c5n, c6a, c6i |
-| agent-voice instance size | xlarge only | xlarge, 2xlarge | ⚠️ CHANGE to xlarge only |
-| livekit-egress capacity type | on-demand only | spot + on-demand | ⚠️ CHANGE to on-demand only |
-| livekit-egress disruption | WhenEmpty | WhenEmptyOrUnderutilized | ⚠️ CHANGE to WhenEmpty |
-| livekit-egress instance type | c7g.2xlarge only | c7g.xlarge, c7g.2xlarge | ⚠️ CHANGE to c7g.2xlarge only |
-| livekit-server AZ pin | NOT pinned | ap-south-1a | Keep as-is (our cluster needs this) |
-| KEDA nodeSelector | `NodeGroupType: core` | Not configured yet | ⚠️ ADD to custom-values.yaml |
-| Karpenter nodeSelector | `NodeGroupType: core` | Not deployed in our repo | N/A (EKS managed) |
-
----
-
-## Fixes Required
-
-1. **Rename `app-workloads` nodepool → `dev-workloads`** (align with reference)
-2. **Update taint: `workload=app` → `workload=dev-workloads`**
-3. **Update label: `NodeGroupType: app` → `NodeGroupType: dev-workloads`**
-4. **Add `monitoring` nodepool** (t4g/m7g, arm64, on-demand, ap-south-1b)
-5. **Fix agent-voice:** instance family → c6in, c5n, c6a, c6i; size → xlarge only
-6. **Fix livekit-egress:** capacity → on-demand only; disruption → WhenEmpty; instance → c7g.2xlarge only
-7. **Update staging values.yaml:** Change all 5 shared services nodeSelector/toleration from `dev-workloads` (already correct in staging values)
-8. **Add KEDA nodeSelector** to `addons/keda/custom-values.yaml` → `NodeGroupType: core`
+| Config | Reference Repo | Our Repo | Status |
+|--------|---------------|----------|--------|
+| NodePool name for shared services | `dev-workloads` | `dev-workloads` | ✅ FIXED |
+| Taint value for shared services | `dev-workloads` | `dev-workloads` | ✅ FIXED |
+| Label for shared services | `NodeGroupType: dev-workloads` | `NodeGroupType: dev-workloads` | ✅ FIXED |
+| Monitoring nodepool | Present | Present | ✅ FIXED |
+| agent-voice instance family | c6in, c5n, c6a, c6i | c6in, c5n, c6a, c6i | ✅ FIXED |
+| agent-voice instance size | xlarge only | xlarge only | ✅ FIXED |
+| livekit-egress capacity type | on-demand only | on-demand only | ✅ FIXED |
+| livekit-egress disruption | WhenEmpty | WhenEmpty | ✅ FIXED |
+| livekit-egress instance type | c7g.2xlarge only | c7g.2xlarge only | ✅ FIXED |
+| livekit-server AZ pin | NOT pinned | ap-south-1a | ✅ Intentional (our cluster needs intra-AZ) |
+| KEDA nodeSelector | `NodeGroupType: core` | `NodeGroupType: core` | ✅ FIXED |
+| Karpenter nodeSelector | `NodeGroupType: core` | N/A (EKS managed) | ✅ N/A |
 
 ---
 
