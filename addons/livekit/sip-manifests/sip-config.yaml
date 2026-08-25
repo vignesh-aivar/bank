@@ -7,13 +7,13 @@ data:
   SIP_CONFIG_BODY: |
     log_level: debug
 
-    api_key: "apikey-f08c885db1aa9798"
-    api_secret: "ZCoo5vnP1ec1dFzAluM0SWneFH0zmokm7DjJmQecRk6zIFifHF9rzO73DlNcoJYQ"
+    api_key: "<LIVEKIT_API_KEY>"
+    api_secret: "<LIVEKIT_API_SECRET>"
 
     ws_url: "ws://livekit-server.livekit.svc.cluster.local:80"
 
     redis:
-      address: "master.livekit-redis.hxh1sa.aps1.cache.amazonaws.com:6379"
+      address: "<REDIS_ENDPOINT>:6379"
 
     sip_port: 5060
     rtp_port_range_start: 10000

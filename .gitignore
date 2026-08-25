@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp files
+*.tmp
+/tmp/
+
+# Secrets - use ExternalSecrets or Kubernetes Secrets instead
+*.env
+.env.*
