@@ -54,6 +54,60 @@ aws eks create-nodegroup \
   --tags Environment=production,Service=convogent,NodeGroup=agent-voice
 ```
 
+### LiveKit Server Node Group
+
+```bash
+aws eks create-nodegroup \
+  --cluster-name <CLUSTER_NAME> \
+  --nodegroup-name convogent-livekit-server \
+  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --instance-types c6a.2xlarge \
+  --scaling-config minSize=1,maxSize=10,desiredSize=1 \
+  --ami-type AL2023_x86_64_STANDARD \
+  --capacity-type ON_DEMAND \
+  --disk-size 50 \
+  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --labels workload=livekit-server \
+  --taints "key=workload,value=livekit-server,effect=NO_SCHEDULE" \
+  --tags Environment=production,Service=convogent,NodeGroup=livekit-server
+```
+
+### LiveKit Egress Node Group
+
+```bash
+aws eks create-nodegroup \
+  --cluster-name <CLUSTER_NAME> \
+  --nodegroup-name convogent-livekit-egress \
+  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --instance-types c6a.2xlarge \
+  --scaling-config minSize=1,maxSize=10,desiredSize=1 \
+  --ami-type AL2023_x86_64_STANDARD \
+  --capacity-type ON_DEMAND \
+  --disk-size 50 \
+  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --labels workload=livekit-egress \
+  --taints "key=workload,value=livekit-egress,effect=NO_SCHEDULE" \
+  --tags Environment=production,Service=convogent,NodeGroup=livekit-egress
+```
+
+### LiveKit SIP Node Group
+
+```bash
+aws eks create-nodegroup \
+  --cluster-name <CLUSTER_NAME> \
+  --nodegroup-name convogent-livekit-sip \
+  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --instance-types c6a.2xlarge \
+  --scaling-config minSize=1,maxSize=10,desiredSize=1 \
+  --ami-type AL2023_x86_64_STANDARD \
+  --capacity-type ON_DEMAND \
+  --disk-size 50 \
+  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --labels workload=livekit-sip \
+  --taints "key=workload,value=livekit-sip,effect=NO_SCHEDULE" \
+  --tags Environment=production,Service=convogent,NodeGroup=livekit-sip
+```
+
 ---
 
 ## 3. Install EKS Pod Identity Agent
