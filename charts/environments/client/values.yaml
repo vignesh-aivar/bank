@@ -339,6 +339,8 @@ voiceService:
     scaleDownPods: 1
     scaleDownPeriodSeconds: 120
     scaleDownSelectPolicy: Min
+  podMonitor:
+    enabled: false
   nodeSelector:
     NodeGroupType: agent-voice
   tolerations:

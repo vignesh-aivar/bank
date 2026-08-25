@@ -22,15 +22,15 @@ kubectl create ns convogent
 
 ```bash
 aws eks create-nodegroup \
-  --cluster-name <CLUSTER_NAME> \
+  --cluster-name hbl-aws-aps1-genai-dev-cluster \
   --nodegroup-name convogent-app \
-  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --node-role arn:aws:iam::273354645607:role/hbl-aws-genai-dev-workerNode-role \
   --instance-types c6a.2xlarge \
   --scaling-config minSize=1,maxSize=3,desiredSize=2 \
   --ami-type AL2023_x86_64_STANDARD \
   --capacity-type ON_DEMAND \
   --disk-size 50 \
-  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --subnets subnet-0624428aa55bb5468 subnet-03bfd0bd3bdfef179 subnet-097cab110ae24c040  \
   --labels NodeGroupType=app \
   --taints "key=workload,value=app,effect=NO_SCHEDULE" \
   --tags Environment=production,Service=convogent,NodeGroup=app
@@ -40,15 +40,15 @@ aws eks create-nodegroup \
 
 ```bash
 aws eks create-nodegroup \
-  --cluster-name <CLUSTER_NAME> \
+  --cluster-name hbl-aws-aps1-genai-dev-cluster \
   --nodegroup-name convogent-agent-voice \
-  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --node-role arn:aws:iam::273354645607:role/hbl-aws-genai-dev-workerNode-role \
   --instance-types c6a.2xlarge \
   --scaling-config minSize=1,maxSize=10,desiredSize=1 \
   --ami-type AL2023_x86_64_STANDARD \
   --capacity-type ON_DEMAND \
   --disk-size 50 \
-  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --subnets subnet-0624428aa55bb5468 subnet-03bfd0bd3bdfef179 subnet-097cab110ae24c040 \
   --labels NodeGroupType=agent-voice \
   --taints "key=workload,value=agent-voice,effect=NO_SCHEDULE" \
   --tags Environment=production,Service=convogent,NodeGroup=agent-voice
@@ -58,15 +58,15 @@ aws eks create-nodegroup \
 
 ```bash
 aws eks create-nodegroup \
-  --cluster-name <CLUSTER_NAME> \
+  --cluster-name hbl-aws-aps1-genai-dev-cluster \
   --nodegroup-name convogent-livekit-server \
-  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --node-role arn:aws:iam::273354645607:role/hbl-aws-genai-dev-workerNode-role \
   --instance-types c6a.2xlarge \
   --scaling-config minSize=1,maxSize=10,desiredSize=1 \
   --ami-type AL2023_x86_64_STANDARD \
   --capacity-type ON_DEMAND \
   --disk-size 50 \
-  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --subnets subnet-0624428aa55bb5468 subnet-03bfd0bd3bdfef179 subnet-097cab110ae24c040 \
   --labels workload=livekit-server \
   --taints "key=workload,value=livekit-server,effect=NO_SCHEDULE" \
   --tags Environment=production,Service=convogent,NodeGroup=livekit-server
@@ -76,15 +76,15 @@ aws eks create-nodegroup \
 
 ```bash
 aws eks create-nodegroup \
-  --cluster-name <CLUSTER_NAME> \
+  --cluster-name hbl-aws-aps1-genai-dev-cluster \
   --nodegroup-name convogent-livekit-egress \
-  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --node-role arn:aws:iam::273354645607:role/hbl-aws-genai-dev-workerNode-role \
   --instance-types c6a.2xlarge \
   --scaling-config minSize=1,maxSize=10,desiredSize=1 \
   --ami-type AL2023_x86_64_STANDARD \
   --capacity-type ON_DEMAND \
   --disk-size 50 \
-  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --subnets subnet-0624428aa55bb5468 subnet-03bfd0bd3bdfef179 subnet-097cab110ae24c040 \
   --labels workload=livekit-egress \
   --taints "key=workload,value=livekit-egress,effect=NO_SCHEDULE" \
   --tags Environment=production,Service=convogent,NodeGroup=livekit-egress
@@ -94,15 +94,15 @@ aws eks create-nodegroup \
 
 ```bash
 aws eks create-nodegroup \
-  --cluster-name <CLUSTER_NAME> \
+  --cluster-name hbl-aws-aps1-genai-dev-cluster \
   --nodegroup-name convogent-livekit-sip \
-  --node-role arn:aws:iam::273354645607:role/<NODE_ROLE_NAME> \
+  --node-role arn:aws:iam::273354645607:role/hbl-aws-genai-dev-workerNode-role \
   --instance-types c6a.2xlarge \
   --scaling-config minSize=1,maxSize=10,desiredSize=1 \
   --ami-type AL2023_x86_64_STANDARD \
   --capacity-type ON_DEMAND \
   --disk-size 50 \
-  --subnets <SUBNET_1> <SUBNET_2> <SUBNET_3> \
+  --subnets subnet-0624428aa55bb5468 subnet-03bfd0bd3bdfef179 subnet-097cab110ae24c040 \
   --labels workload=livekit-sip \
   --taints "key=workload,value=livekit-sip,effect=NO_SCHEDULE" \
   --tags Environment=production,Service=convogent,NodeGroup=livekit-sip
