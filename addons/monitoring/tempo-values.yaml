@@ -126,11 +126,11 @@ metaMonitoring:
 global:
   clusterDomain: cluster.local
   image:
-    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    registry: public.ecr.aws/u7h9i3k7/monitoring
 
 tempo:
   image:
-    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    registry: public.ecr.aws/u7h9i3k7/monitoring
     repository: tempo
     tag: 2.9.0
 

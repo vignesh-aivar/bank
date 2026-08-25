@@ -4,7 +4,7 @@
 mode: daemonset
 
 image:
-  repository: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/otel-collector-contrib
+  repository: public.ecr.aws/u7h9i3k7/monitoring/otel-collector-contrib
 
 # DaemonSet runs on ALL nodes (including tainted app, voice, livekit nodes)
 tolerations:

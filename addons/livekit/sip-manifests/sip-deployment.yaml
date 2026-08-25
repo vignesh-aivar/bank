@@ -27,7 +27,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: sip
-          image: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-sip:latest
+          image: public.ecr.aws/u7h9i3k7/livekit/livekit-sip:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: SIP_CONFIG_BODY

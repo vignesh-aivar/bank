@@ -9,11 +9,11 @@ fullnameOverride: prometheus
 prometheusOperator:
   enabled: true
   image:
-    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    registry: public.ecr.aws/u7h9i3k7/monitoring
     repository: prometheus-operator
   prometheusConfigReloader:
     image:
-      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      registry: public.ecr.aws/u7h9i3k7/monitoring
       repository: prometheus-config-reloader
   admissionWebhooks:
     enabled: false
@@ -42,7 +42,7 @@ prometheus:
   prometheusSpec:
     replicas: 1
     image:
-      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      registry: public.ecr.aws/u7h9i3k7/monitoring
       repository: prometheus
     enableRemoteWriteReceiver: true
     retention: 7d
@@ -95,7 +95,7 @@ alertmanager:
   alertmanagerSpec:
     replicas: 1
     image:
-      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      registry: public.ecr.aws/u7h9i3k7/monitoring
       repository: alertmanager
     nodeSelector:
       NodeGroupType: monitoring
@@ -137,16 +137,16 @@ alertmanager:
 grafana:
   enabled: true
   image:
-    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    registry: public.ecr.aws/u7h9i3k7/monitoring
     repository: grafana
   initChownData:
     image:
-      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      registry: public.ecr.aws/u7h9i3k7/monitoring
       repository: busybox
       tag: "1.31.1"
   sidecar:
     image:
-      registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+      registry: public.ecr.aws/u7h9i3k7/monitoring
       repository: k8s-sidecar
       tag: "1.30.0"
     dashboards:
@@ -214,7 +214,7 @@ prometheus-node-exporter:
   tolerations:
     - operator: Exists
   image:
-    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    registry: public.ecr.aws/u7h9i3k7/monitoring
     repository: node-exporter
 
 #---------------------------------------------------------------
@@ -226,7 +226,7 @@ kubeStateMetrics:
 kube-state-metrics:
   replicas: 1
   image:
-    registry: 273354645607.dkr.ecr.ap-south-1.amazonaws.com
+    registry: public.ecr.aws/u7h9i3k7/monitoring
     repository: kube-state-metrics
   nodeSelector:
     NodeGroupType: monitoring

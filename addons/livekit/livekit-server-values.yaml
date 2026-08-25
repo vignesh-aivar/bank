@@ -6,7 +6,7 @@ terminationGracePeriodSeconds: 18000
 
 
 image:
-  repository: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-server
+  repository: public.ecr.aws/u7h9i3k7/livekit/livekit-server
   tag: latest
   pullPolicy: IfNotPresent
 

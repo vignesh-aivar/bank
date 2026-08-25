@@ -4,7 +4,7 @@
 replicas: 1
 
 image:
-  repository: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/prometheus-adapter
+  repository: public.ecr.aws/u7h9i3k7/monitoring/prometheus-adapter
 
 nodeSelector:
   NodeGroupType: monitoring

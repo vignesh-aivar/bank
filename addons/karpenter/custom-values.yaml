@@ -1,0 +1,43 @@
+# Karpenter custom values - Bank EKS
+# Usage: helm install karpenter oci://public.ecr.aws/karpenter/karpenter --version 1.3.3 -f ./addons/karpenter/custom-values.yaml -n karpenter --create-namespace
+
+settings:
+  clusterName: convogent-v2-loadtest
+  interruptionQueue: Karpenter-convogent-v2-loadtest
+
+serviceAccount:
+  create: true
+  name: karpenter
+
+replicas: 1
+
+# Pin Karpenter controller to the core managed node group
+nodeSelector:
+  NodeGroupType: core
+
+# Controller image from our public ECR
+controller:
+  image:
+    repository: public.ecr.aws/u7h9i3k7/karpenter/controller
+    tag: "1.3.3"
+  env:
+    - name: AWS_REGION
+      value: ap-south-1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+podDisruptionBudget:
+  name: karpenter
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: prometheus
+
+logLevel: info

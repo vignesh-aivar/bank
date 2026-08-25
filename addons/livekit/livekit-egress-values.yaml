@@ -6,7 +6,7 @@ terminationGracePeriodSeconds: 3600
 
 
 image:
-  repository: 273354645607.dkr.ecr.ap-south-1.amazonaws.com/livekit-egress
+  repository: public.ecr.aws/u7h9i3k7/livekit/livekit-egress
   tag: latest
   pullPolicy: IfNotPresent
 
